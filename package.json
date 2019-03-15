@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_PATH=. mocha test"
   },
   "repository": {
     "type": "git",
@@ -18,10 +18,15 @@
   },
   "homepage": "https://github.com/wingsdao/griffin-consensus-poc#readme",
   "dependencies": {
+    "dotenv": "^7.0.0",
     "ethereumjs-util": "^6.1.0",
     "keccak256": "^1.0.0",
     "rlp": "^2.2.2",
     "secp256k1": "^3.6.2",
     "vrf.js": "0.0.4"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.0.2"
   }
 }
