@@ -102,7 +102,7 @@ const transport = (function initTransportLayer() {
             return (msg = msg.toString()) && udp.send(msg, 0, msg.length, PORT, MULTICAST_ADDR, cb);
         }
     };
-});
+})();
 
 /**
  * Identifiable layer
@@ -151,6 +151,6 @@ const identifiableLayer = (function initIdentifiableLayer() {
     });
 
     return emitter;
-});
+})();
 
 module.exports = identifiableLayer;
