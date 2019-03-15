@@ -95,7 +95,7 @@ const transport = (function initTransportLayer() {
     udp.on('listening', () => udp.addMembership(MULTICAST_ADDR));
 
     return {
-        on: udp.on,
+        on: udp.on.bind(udp),
         send(msg, cb) {
             if (!msg) { throw TransportError('Message must be buffer or string'); }
             return (msg = msg.toString()) && udp.send(msg, 0, msg.length, PORT, MULTICAST_ADDR, cb);
