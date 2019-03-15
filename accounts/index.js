@@ -1,9 +1,10 @@
 'use strict';
 
-const ethUtil       = require('ethereumjs-util');
+const rlp           = require('rlp');
 const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
+const helpers       = require('lib/helpers');
 
 /**
  * Entrypoint.
@@ -19,6 +20,8 @@ const keccak256     = require('keccak256');
     console.log('Balance:', account.balance);
 
     vote(account.secretKey, Buffer.from('address'));
+
+    sendTx(account.secretKey, {from: account.address, to: account.address, value: 10, data: '0x0'});
 
 })();
 
@@ -56,10 +59,16 @@ function createAccount() {
  * @param  {String} to
  * @param  {Number} value
  * @param  {String} data
+ * @param  {String} secretKey
  */
-function sendTx({from, to, value, data}) {
-    const msg = {from, to, value, data};
+function sendTx(secretKey, {from, to, value, data}) {
+    const tx = sign(secretKey, {from, to, value, data});
+
+    console.log('Transaction', tx);
+
     // TODO broadcast
+    // sendMessage(ts);
+    // NOTE rlp.encode(tx) will turn object to string.
 }
 
 /**
@@ -68,26 +77,47 @@ function sendTx({from, to, value, data}) {
  * @param {Buffer} secretKey
  * @param {Buffer} delegateAddress
  */
-async function vote(secretKey, delegateAddress) {
+function vote(secretKey, delegateAddress) {
     const hash = keccak256(delegateAddress);
-    const sig  = generateSignature(hash, secretKey);
+    const sig  = helpers.generateSignature(hash, secretKey);
+    const msg  = {delegateAddress, sig};
 
-    console.log('sig', sig);
-
-    const msg = {delegateAddress, sig};
     // TODO broadcast
+    // sendMessage(msg);
 }
 
 /**
- * Generate v r s signature.
+ * Produce the block.
  *
- * @param  {Buffer} dataToSign
- * @param  {Buffer} secretKey
- * @return {String}
+ * @return {[type]} [description]
  */
-function generateSignature(dataToSign, secretKey) {
-    const msg     = Buffer.from(dataToSign, 'hex');
-    const msgHash = ethUtil.hashPersonalMessage(msg);
-    const sig     = ethUtil.ecsign(msgHash, new Buffer(secretKey, 'hex'));
-    return ethUtil.toRpcSig(sig.v, sig.r, sig.s);
+function produceBlock(secretKey) {
+    // Get transactions from pool.
+    // Form the block.
+    // Include block to blockchain XXX before it is approved by 2/3 of delegates or after?
+    // TODO broadcast
+    // sendMessage(block);
+}
+
+/**
+ * Sign transaction.
+ *
+ * @param  {String} secretKey
+ * @param  {Object} tx
+ * @param  {String} chainId
+ * @return {Object}
+ */
+function sign(secretKey, tx, chainId) {
+    const encodedData = rlp.encode(JSON.stringify(tx));
+    const msgHash = keccak256(encodedData);
+    const sig = secp256k1.sign(msgHash, secretKey);
+    const recovery = sig.recovery;
+
+    const signature = {
+        r: sig.signature.slice(0, 32),
+        s: sig.signature.slice(32, 64),
+        v: chainId ? recovery + (chainId * 2 + 35) : recovery + 27
+    };
+
+    return Object.assign(tx, signature);
 }
