@@ -5,7 +5,6 @@
 'use strict';
 
 // Dependencies
-const util   = require('util');
 const dgram  = require('dgram');
 const events = require('events');
 
@@ -78,8 +77,8 @@ const TARGET_ALL = '*';
  * Layers definition
  */
 
-class TransportError extends Error {};
-class IdentityLayerError extends TransportError {};
+class TransportError extends Error {}
+class IdentityLayerError extends TransportError {}
 
 /**
  * Base transport level
@@ -139,7 +138,7 @@ const identifiableLayer = (function initIdentifiableLayer() {
             throw new IdentityLayerError('Unable to process message contents: ' + contents.toString());
         }
 
-        if (groups.concat([TRANSPORT_ID, TARGET_ALL]).includes(msg.target)) {
+        if (groups.concat([TRANSPORT_ID, TARGET_ALL]).includes(msg.target) && msg.sender !== TRANSPORT_ID) {
             emitter.emit('message', msg, meta);
         }
     });
