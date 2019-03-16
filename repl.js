@@ -12,13 +12,14 @@ const ctx  = tty.context;
 // Attach transport system to it
 (function attachTransport(tty) {
 
-    const transport = require('base/transport');
+    const transport = ctx.transport = require('base/transport');
 
     tty.defineCommand('info', {
         action() {
             this.clearBufferedCommand();
             console.log('Transport ID is: %s', transport.transportId);
             console.log('Your groups are: %s', transport.groups.concat(['*']));
+            console.log('Known nodes are: %s', JSON.stringify([...transport.knownNodes.keys()], null, 2));
             this.displayPrompt();
         }
     });

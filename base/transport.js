@@ -64,7 +64,7 @@ const PORT = process.env.UDP_PORT || 30000;
  *
  * @type {String}
  */
-const TRANSPORT_ID = require('crypto').randomBytes(5).toString('hex');
+const TRANSPORT_ID = [randomName(), require('crypto').randomBytes(2).toString('hex')].join('_');
 
 /**
  * Default target for messages
@@ -72,6 +72,9 @@ const TRANSPORT_ID = require('crypto').randomBytes(5).toString('hex');
  * @type {String}
  */
 const TARGET_ALL = '*';
+
+const NODE_ONLINE = 'NodeOnline';
+const HANDSHAKE   = 'HandshakeWithNewbie';
 
 /**
  * Layers definition
@@ -115,8 +118,9 @@ const transport = (function initTransportLayer() {
  */
 const identifiableLayer = (function initIdentifiableLayer() {
 
-    const groups  = [];
-    const emitter = new events();
+    const groups     = [];
+    const knownNodes = new Map();
+    const emitter    = new events();
 
     emitter.joinGroup = function joinGroup(name) {
         if (!name) { throw new IdentityLayerError('Group must be a non-empty String'); }
@@ -125,7 +129,7 @@ const identifiableLayer = (function initIdentifiableLayer() {
 
     emitter.send = function sendMessage(content, target = TARGET_ALL) {
         if (!target) { throw new IdentityLayerError('No target specified!'); }
-        return transport.send(JSON.stringify({target, content, sender: TRANSPORT_ID}));
+        return transport.send(JSON.stringify({target, content, sender: TRANSPORT_ID, timestamp: Date.now()}));
     };
 
     transport.on('message', function onMessage(contents, meta) {
@@ -140,11 +144,23 @@ const identifiableLayer = (function initIdentifiableLayer() {
 
         if (groups.concat([TRANSPORT_ID, TARGET_ALL]).includes(msg.target) && msg.sender !== TRANSPORT_ID) {
             emitter.emit('message', msg, meta);
+            knownNodes.set(msg.sender, meta);
         }
+    });
+
+    emitter.on('message', function sendIdentityWhenRequestes(msg) {
+        if (msg.content.type === NODE_ONLINE) {
+            emitter.send({type: HANDSHAKE}, msg.sender);
+        }
+    });
+
+    transport.on('listening', function requestIdentities() {
+        emitter.send({type: NODE_ONLINE}, '*');
     });
 
     Object.defineProperties(emitter, {
         transportId: {value: TRANSPORT_ID},
+        knownNodes: {get: () => knownNodes},
         groups: {get: () => groups},
         udp: {value: transport}
     });
@@ -153,3 +169,13 @@ const identifiableLayer = (function initIdentifiableLayer() {
 })();
 
 module.exports = identifiableLayer;
+
+/**
+ * @return {String}
+ */
+function randomName() {
+    return [
+        'alice','bob','josh','ben','yuri','sam','bud','amy','noah','lana','george',
+        'beatrice','karen','hank','charlie','pam','dude','bonny','arthur','merkel'
+    ].sort(() => Math.random() - 0.5)[0];
+}
