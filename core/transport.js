@@ -1,5 +1,5 @@
 /**
- * @module transport
+ * @module core/transport
  */
 
 'use strict';
