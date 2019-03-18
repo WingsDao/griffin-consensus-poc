@@ -1,36 +1,24 @@
+/**
+ * @module accounts
+ */
+
 'use strict';
 
-const rlp           = require('rlp');
 const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
 const helpers       = require('lib/helpers');
 
-/**
- * Entrypoint.
- */
-(function main() {
-
-    const account = createAccount();
-
-    console.log('[Account]');
-    console.log('Secret key:', '0x' + account.secretKey.toString('hex'));
-    console.log('Public key:', '0x' + account.publicKey.toString('hex'));
-    console.log('Address:', '0x' + account.address.toString('hex'));
-    console.log('Balance:', account.balance);
-
-    vote(account.secretKey, Buffer.from('address'));
-
-    sendTx(account.secretKey, {from: account.address, to: account.address, value: 10, data: '0x0'});
-
-})();
+module.exports = Account;
 
 /**
- * Create new account.
- *
- * @return {Object}
+ * General account @class.
  */
-function createAccount() {
+function Account() {
+    if (!new.target) {
+        return new Account();
+    }
+
     let secretKey;
 
     do {
@@ -40,36 +28,28 @@ function createAccount() {
     const publicKey = secp256k1.publicKeyCreate(Buffer.from(secretKey, 'hex'));
     const address   = keccak256(publicKey).slice(12);
 
-    return {
-        secretKey,
-        publicKey,
-        address,
-        nonce: 0,
-        balance: 0,
-        rating: 0,
-        lotteryTickets: [],
-        voteFor: 0
-    };
+    Object.defineProperties(this, {
+        secretKey:    {value: secretKey},
+        publicKey:    {value: publicKey},
+        address:      {value: address},
+        nonce:        {value: 0},
+        balance:      {value: 0},
+        rating:       {value: 0},
+        certificates: {value: []}
+    });
 }
 
 /**
  * Broadcast transaction.
  *
- * @param  {String} from
- * @param  {String} to
- * @param  {Number} value
- * @param  {String} data
- * @param  {String} secretKey
+ * @param {Object} params
  */
-function sendTx(secretKey, {from, to, value, data}) {
-    const tx = sign(secretKey, {from, to, value, data});
-
-    console.log('Transaction', tx);
+Account.prototype.sendTx = function sendTx({to, value, data}) {
+    const tx = helpers.sign(this.secretKey, {from: this.address, to, value, data});
 
     // TODO broadcast
-    // sendMessage(ts);
     // NOTE rlp.encode(tx) will turn object to string.
-}
+};
 
 /**
  * Vote for delegate.
@@ -77,47 +57,33 @@ function sendTx(secretKey, {from, to, value, data}) {
  * @param {Buffer} secretKey
  * @param {Buffer} delegateAddress
  */
-function vote(secretKey, delegateAddress) {
+Account.prototype.vote = function vote(delegateAddress) {
     const hash = keccak256(delegateAddress);
-    const sig  = helpers.generateSignature(hash, secretKey);
+    const sig  = helpers.generateSignature(hash, this.secretKey);
     const msg  = {delegateAddress, sig};
 
     // TODO broadcast
-    // sendMessage(msg);
-}
+};
 
 /**
- * Produce the block.
+ * Perform a stake
+ * (lock coins and get certificates).
  *
+ * @param  {Number} amount Amount of coins to stake.
  * @return {[type]} [description]
  */
-function produceBlock(secretKey) {
+Account.prototype.stake = function stake(amount) {
+
+};
+
+/**
+* Produce the block.
+*
+* @return {[type]} [description]
+*/
+Account.prototype.produceBlock = function produceBlock() {
     // Get transactions from pool.
     // Form the block.
     // Include block to blockchain XXX before it is approved by 2/3 of delegates or after?
-    // TODO broadcast
-    // sendMessage(block);
-}
-
-/**
- * Sign transaction.
- *
- * @param  {String} secretKey
- * @param  {Object} tx
- * @param  {String} chainId
- * @return {Object}
- */
-function sign(secretKey, tx, chainId) {
-    const encodedData = rlp.encode(JSON.stringify(tx));
-    const msgHash = keccak256(encodedData);
-    const sig = secp256k1.sign(msgHash, secretKey);
-    const recovery = sig.recovery;
-
-    const signature = {
-        r: sig.signature.slice(0, 32),
-        s: sig.signature.slice(32, 64),
-        v: chainId ? recovery + (chainId * 2 + 35) : recovery + 27
-    };
-
-    return Object.assign(tx, signature);
-}
+    // Broadcast
+};
