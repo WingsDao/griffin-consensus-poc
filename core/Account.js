@@ -73,8 +73,11 @@ Account.prototype.vote = function vote(delegateAddress) {
  * @param  {Number} amount Amount of coins to stake.
  * @return {[type]} [description]
  */
-Account.prototype.stake = function stake(amount) {
-
+Account.prototype.stake = function stake(/*amount*/) {
+    // TODO
+    // 1. Mark amount as locked (locking mechanism?).
+    // 2. Generate certificates (random?).
+    // 3. transport.send(stakeRequest?);
 };
 
 /**
@@ -83,8 +86,9 @@ Account.prototype.stake = function stake(amount) {
 * @return {[type]} [description]
 */
 Account.prototype.produceBlock = function produceBlock() {
-    // Get transactions from pool.
-    // Form the block.
-    // Include block to blockchain XXX before it is approved by 2/3 of delegates or after?
-    // Broadcast
+    // TODO
+    // 1. Get transactions from pool.
+    // 2. Form the block.
+    // 3. Include block to blockchain XXX before it is approved by 2/3 of delegates or after?
+    // 4. transport.send(block);
 };
