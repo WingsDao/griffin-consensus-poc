@@ -25,7 +25,7 @@ function Account() {
         secretKey = randomBytes(32);
     } while (!secp256k1.privateKeyVerify(secretKey));
 
-    const publicKey = secp256k1.publicKeyCreate(Buffer.from(secretKey, 'hex'));
+    const publicKey = secp256k1.publicKeyCreate(Buffer.from(secretKey, 'hex'), false).slice(1);
     const address   = keccak256(publicKey).slice(12);
 
     Object.defineProperties(this, {
