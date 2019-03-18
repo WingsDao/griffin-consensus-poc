@@ -18,18 +18,22 @@ Alice sends `n` coins to Bob.
 
 Alice votes with `n` coins for Clare. Bob votes with `m` coins for Damir.
 
-#### 3. Delegates generate random number
+#### 3. Stake
 
-This step will result in random number which corresponds to some certificate owned by potential block producer.
+Elliot and Fenrir stake their coins.
 
-#### 4. Produce block
+#### 4. Delegates generate random number
+
+Random certificate is being chosen. Owner of the chosen certificate is the next block producer.
+
+#### 5. Produce block
 
 Selected block producer produces block.
 
-#### 5. Validate block
+#### 6. Validate block
 
 Clare and Damir validate produced block.
 
-#### 6. Network participants receive block
+#### 7. Network participants receive block
 
 New block was added. Actors receive it and verify that their transactions were included.
