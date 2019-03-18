@@ -12,7 +12,7 @@ const ctx  = tty.context;
 // Attach transport system to it
 (function attachTransport(tty) {
 
-    const transport = ctx.transport = require('base/transport');
+    const transport = ctx.transport = require('core/transport');
 
     tty.defineCommand('info', {
         action() {

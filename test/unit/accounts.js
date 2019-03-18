@@ -6,7 +6,7 @@
 
 require('chai').should();
 
-const Account = require('accounts');
+const Account = require('core/Account');
 
 describe('Accounts', () => {
     let account = {};

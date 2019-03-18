@@ -1,5 +1,5 @@
 /**
- * @module accounts
+ * @module Account
  */
 
 'use strict';
@@ -8,6 +8,7 @@ const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
 const helpers       = require('lib/helpers');
+const transport     = require('core/transport');
 
 module.exports = Account;
 
@@ -47,8 +48,8 @@ function Account() {
 Account.prototype.sendTx = function sendTx({to, value, data}) {
     const tx = helpers.sign(this.secretKey, {from: this.address, to, value, data});
 
-    // TODO broadcast
     // NOTE rlp.encode(tx) will turn object to string.
+    transport.send(tx);
 };
 
 /**
@@ -62,7 +63,7 @@ Account.prototype.vote = function vote(delegateAddress) {
     const sig  = helpers.generateSignature(hash, this.secretKey);
     const msg  = {delegateAddress, sig};
 
-    // TODO broadcast
+    transport.send(msg);
 };
 
 /**
