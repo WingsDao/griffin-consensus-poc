@@ -86,10 +86,8 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
  */
 Account.prototype.vote = function vote(address, amount) {
     const data = helpers.encodeTxData('vote(address,uint256)', [address, amount]);
-    const tx   = new ethereumTx({nonce: this.nonce, to: ZERO_ADDRESS, value: amount, data});
-    tx.sign(this.secretKey);
 
-    return '0x' + tx.serialize().toString('hex');
+    return this.tx(ZERO_ADDRESS, amount, data);
 };
 
 /**
@@ -101,10 +99,8 @@ Account.prototype.vote = function vote(address, amount) {
  */
 Account.prototype.stake = function stake(amount) {
     const data = helpers.encodeTxData('stake(uint256)', [amount]);
-    const tx   = new ethereumTx({nonce: this.nonce, to: ZERO_ADDRESS, value: amount, data});
-    tx.sign(this.secretKey);
 
-    return '0x' + tx.serialize().toString('hex');
+    return this.tx(ZERO_ADDRESS, amount, data);
 };
 
 /**
