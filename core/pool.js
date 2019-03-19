@@ -19,6 +19,7 @@ const DATADIR = process.env.DATADIR || 'data';
 
 /**
  * Name of the file where pool is stored
+ * ENV: POOL_FILENAME
  *
  * @type {String}
  */
@@ -55,6 +56,15 @@ exports.add = function add(data) {
  */
 exports.getAll = function getAll() {
     return prom(fs.readFile)(PATH).then((data) => data.toString().split('\n').slice(0, -1));
+};
+
+/**
+ * Empty pool. Clear file contents
+ *
+ * @return {Promise}
+ */
+exports.empty = function emptyPool() {
+    return prom(fs.truncate)(PATH);
 };
 
 /**
