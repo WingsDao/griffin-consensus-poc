@@ -19,6 +19,9 @@ const TIMEOUT = 1000;
 
 const producer = Account();
 
+console.log('producer address', '0x' + producer.address.toString('hex'));
+console.log('producer public key', '0x' + producer.publicKey.toString('hex'));
+
 (async function main(parentBlock) {
 
     const transactions = await pool.getAll();
@@ -39,9 +42,6 @@ const producer = Account();
 
     const target       = Account();
     const serializedTx = producer.tx('0x' + target.address.toString('hex'), '0xff');
-
-    console.log('sender', '0x' + producer.address.toString('hex'));
-    console.log('receiver', '0x' + target.address.toString('hex'));
 
     return pool.add(serializedTx)
         .then(() => wait(TIMEOUT / 4))
