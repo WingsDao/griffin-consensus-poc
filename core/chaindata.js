@@ -1,5 +1,5 @@
 /**
- * @module core/pool
+ * @module core/chaindata
  */
 
 'use strict';
