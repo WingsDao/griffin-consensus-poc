@@ -95,8 +95,11 @@ const identifiableLayer = (function initIdentifiableLayer() {
         return groups.push(name) && undefined;
     };
 
-    emitter.send = function sendMessage(content, target = TARGET_ALL) {
-        if (!target) { throw new IdentityLayerError('No target specified!'); }
+    emitter.send = function sendMessage(evt, data, target = TARGET_ALL) {
+        if (!target) { throw new IdentityLayerError('Wrong target!'); }
+
+        const content = {type: evt, data};
+
         return transport.send(JSON.stringify({target, content, sender: TRANSPORT_ID, timestamp: Date.now()}));
     };
 

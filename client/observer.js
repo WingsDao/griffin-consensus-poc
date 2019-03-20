@@ -19,4 +19,9 @@ require('core/transport')
     .on(events.NEW_TRANSACTION, function newTx(tx) {
         pool.add(tx);
     })
+
+    .on(events.REQUEST_POOL, async function poolRequested(data, msg) {
+        (msg.sender !== this.transportId) && this.send(events.SHARE_POOL, await pool.getAll(), msg.sender);
+    })
+
 ;

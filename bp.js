@@ -37,7 +37,7 @@ require('client/observer');
 
     console.log('new block', block);
 
-    transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
+    transport.send(events.NEW_BLOCK, block);
 
     return wait(TIMEOUT).then(newBlock);
 
@@ -49,10 +49,7 @@ require('client/observer');
     const target       = Account();
     const serializedTx = producer.tx('0x' + target.address.toString('hex'), '0xff');
 
-    // console.log('target address', '0x' + target.address.toString('hex'));
-
-    await transport.send({type: events.NEW_TRANSACTION, data: serializedTx});
+    await transport.send(events.NEW_TRANSACTION, serializedTx);
 
     return wait(TIMEOUT / 4).then(newTx);
-
 })();
