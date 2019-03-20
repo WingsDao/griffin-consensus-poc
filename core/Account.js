@@ -4,6 +4,8 @@
 
 'use strict';
 
+const MerkleTree    = require('merkletreejs');
+const rlp           = require('rlp');
 const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
@@ -18,6 +20,9 @@ module.exports = Account;
  * @type {String}
  */
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+const VOTE_METHOD_SIG  = 'vote(address,uint256)';
+const STAKE_METHOD_SIG = 'stake(uint256)';
 
 /**
  * General account @class.
@@ -85,7 +90,7 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
  * @return {String}         Serialized signed transaction.
  */
 Account.prototype.vote = function vote(address, amount) {
-    const data = helpers.encodeTxData('vote(address,uint256)', [address, amount]);
+    const data = helpers.encodeTxData(VOTE_METHOD_SIG, [address, amount]);
 
     return this.tx(ZERO_ADDRESS, amount, data);
 };
@@ -98,7 +103,7 @@ Account.prototype.vote = function vote(address, amount) {
  * @return {String}        Serialized signed transaction.
  */
 Account.prototype.stake = function stake(amount) {
-    const data = helpers.encodeTxData('stake(uint256)', [amount]);
+    const data = helpers.encodeTxData(STAKE_METHOD_SIG, [amount]);
 
     return this.tx(ZERO_ADDRESS, amount, data);
 };
@@ -106,17 +111,97 @@ Account.prototype.stake = function stake(amount) {
 /**
 * Produce the block.
 *
-* @return {Object} TODO
+* @param  {Object}   parentBlock  Parent block.
+* @param  {String[]} transactions Array of transactions to include in new block.
+* @return {Object}                Block.
 */
-Account.prototype.produceBlock = function produceBlock() {
-    // TODO
-    // 1. Get transactions from pool.
-    // 2. [stake] Mark amount as locked (locking mechanism?).
-    // 3. [stake] Generate certificates (random?).
-    // 4. [vote] Mark amount as locked (locking mechanism?).
-    // 5. Form the block.
-    // 6. Calculate new state.
-    // 7. Include block to blockchain (before it is approved by 2/3 of delegates or after?).
+Account.prototype.produceBlock = function produceBlock(parentBlock, transactions) {
+    let block = {};
 
-    // return block;
+    block.number     = parentBlock.number + 1;
+    block.parentHash = parentBlock.hash;
+    block.hash       = '0x' + keccak256(parentBlock.hash).toString('hex');
+    block.producer   = '0x' + this.address.toString('hex');
+    block.state      = parentBlock.state    || [];
+    block.receipts   = parentBlock.receipts || [];
+    block.txRoot     = merkleRoot(transactions);
+
+    for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
+        const txHash = transactions[txIndex];
+        const tx     = helpers.toTxObject(rlp.decode(txHash));
+
+        console.log('tx', tx);
+
+        switch (true) {
+            case isVote(tx.data): {
+                // handle as vote
+
+                // 1. Mark amount as locked (locking mechanism?).
+
+                break;
+            }
+            case isStake(tx.data): {
+                // hadle as stake
+
+                // 1. Mark amount as locked (locking mechanism?).
+                // 2. Generate certificates (random?).
+
+                break;
+            }
+            default: {
+                // handle as normal tx
+
+                // 1. Update the state.
+            }
+        }
+
+        const receipt = {
+            blockHash:        block.hash,
+            blockNumber:      block.number,
+            transactionHash:  txHash,
+            transactionIndex: txIndex,
+            from:             tx.from,
+            to:               tx.to
+        };
+
+        block.receipts.push(receipt);
+    }
+
+    block.stateRoot    = merkleRoot(block.state.map(account => JSON.stringify(account)));
+    block.receiptsRoot = merkleRoot(block.receipts.map(receipt => JSON.stringify(receipt)));
+
+    return block;
 };
+
+/**
+ * Check whether tx action is vote.
+ *
+ * @param  {String}  data Transaction data.
+ * @return {Boolean}
+ */
+function isVote(data) {
+    return data.slice(0, 2 + helpers.METHOD_SIGNATURE_LENGTH) === helpers.encodeTxData(VOTE_METHOD_SIG);
+}
+
+/**
+ * Check whether tx action is stake.
+ *
+ * @param  {String}  data Transaction data.
+ * @return {Boolean}
+ */
+function isStake(data) {
+    return data.slice(0, 2 + helpers.METHOD_SIGNATURE_LENGTH) === helpers.encodeTxData(STAKE_METHOD_SIG);
+}
+
+/**
+ * Generate merkle tree root.
+ *
+ * @param  {String[]} rawLeaves
+ * @return {String}             Tree root.
+ */
+function merkleRoot(rawLeaves) {
+    const leaves = rawLeaves.map(rawLeaf => keccak256(rawLeaf));
+    const tree   = new MerkleTree(leaves, keccak256);
+
+    return '0x' + tree.getRoot().toString('hex');
+}
