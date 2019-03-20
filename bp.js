@@ -20,6 +20,8 @@ const TIMEOUT = 1000;
 
 const producer = Account();
 
+console.log('producer', {address: '0x' + producer.address.toString('hex'), publicKey: '0x' + producer.publicKey.toString('hex')});
+
 require('client/observer');
 
 (async function newBlock() {
@@ -33,6 +35,8 @@ require('client/observer');
 
     await chaindata.add(block);
 
+    console.log('new block', block);
+
     transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
 
     return wait(TIMEOUT).then(newBlock);
@@ -45,8 +49,7 @@ require('client/observer');
     const target       = Account();
     const serializedTx = producer.tx('0x' + target.address.toString('hex'), '0xff');
 
-    console.log('sender', '0x' + producer.address.toString('hex'));
-    console.log('receiver', '0x' + target.address.toString('hex'));
+    // console.log('target address', '0x' + target.address.toString('hex'));
 
     await transport.send({type: events.NEW_TRANSACTION, data: serializedTx});
 

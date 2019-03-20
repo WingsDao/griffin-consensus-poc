@@ -8,7 +8,7 @@ require('chai').should();
 
 const Account = require('core/account');
 const helpers = require('lib/helpers');
-const genesis = require('core/genesis');
+const genesis = require('genesis');
 
 describe('Accounts', () => {
     let account = {};
@@ -55,6 +55,8 @@ describe('Accounts', () => {
         const tx = helpers.toTxObject(serializedTx);
 
         console.log('tx object', tx);
+
+        tx.from.should.be.equal('0x' + account.address.toString('hex'));
     });
 
     it('vote tx', () => {
