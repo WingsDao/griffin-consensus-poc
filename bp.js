@@ -8,7 +8,8 @@ const wait      = require('util').promisify(setTimeout);
 const Account   = require('core/account');
 const transport = require('core/transport');
 const pool      = require('core/pool');
-const genesis   = require('core/genesis');
+const chaindata = require('core/chaindata');
+const events    = require('lib/events');
 
 /**
  * Block producing timeout.
@@ -19,23 +20,27 @@ const TIMEOUT = 1000;
 
 const producer = Account();
 
-(async function main(parentBlock) {
+require('client/observer');
 
+(async function newBlock() {
+
+    const parentBlock  = await chaindata.getLatest();
     const transactions = await pool.getAll();
+
     await pool.drain();
 
     const block = producer.produceBlock(parentBlock, transactions);
 
-    // console.log('block', block);
+    await chaindata.add(block);
 
-    transport.send(block);
+    transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
 
-    return wait(TIMEOUT).then(() => main(block));
+    return wait(TIMEOUT).then(newBlock);
 
-})(genesis);
+})(null);
 
 
-(async function txGenerator() {
+(async function newTx() {
 
     const target       = Account();
     const serializedTx = producer.tx('0x' + target.address.toString('hex'), '0xff');
@@ -43,8 +48,9 @@ const producer = Account();
     console.log('sender', '0x' + producer.address.toString('hex'));
     console.log('receiver', '0x' + target.address.toString('hex'));
 
+    await transport.send({type: events.NEW_TRANSACTION, data: serializedTx});
+
     return pool.add(serializedTx)
         .then(() => wait(TIMEOUT / 4))
-        .then(() => txGenerator());
-
+        .then(newTx);
 })();
