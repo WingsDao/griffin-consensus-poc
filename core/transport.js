@@ -5,8 +5,9 @@
 'use strict';
 
 // Dependencies
-const dgram  = require('dgram');
-const events = require('events');
+const dgram   = require('dgram');
+const Emitter = require('events');
+const events  = require('lib/events');
 
 /**
  * Address of multicast. Must be in range: 224.0.0.0 -> 239.255.255.255
@@ -40,8 +41,8 @@ const TRANSPORT_ID = [randomName(), require('crypto').randomBytes(2).toString('h
  */
 const TARGET_ALL = '*';
 
-const NODE_ONLINE = 'NodeOnline';
-const HANDSHAKE   = 'HandshakeWithNewbie';
+const NODE_ONLINE = events.NODE_ONLINE;
+const HANDSHAKE   = events.HANDSHAKE;
 
 /**
  * Layers definition
@@ -87,7 +88,7 @@ const identifiableLayer = (function initIdentifiableLayer() {
 
     const groups     = [];
     const knownNodes = new Map();
-    const emitter    = new events();
+    const emitter    = new Emitter();
 
     emitter.joinGroup = function joinGroup(name) {
         if (!name) { throw new IdentityLayerError('Group must be a non-empty String'); }
