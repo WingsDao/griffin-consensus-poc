@@ -4,6 +4,7 @@
 
 'use strict';
 
+const MerkleTree    = require('merkletreejs');
 const rlp           = require('rlp');
 const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
@@ -123,19 +124,11 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.producer   = '0x' + this.address.toString('hex');
     block.state      = parentBlock.state    || [];
     block.receipts   = parentBlock.receipts || [];
+    block.txRoot     = merkleRoot(transactions);
 
-    const leaves = transactions.map(tx => keccak256(tx));
-    const tree   = new MerkleTree(leaves, keccak256);
-    const root   = tree.getRoot().toString('hex');
-    const leaf   = keccak256(transactions[0]);
-    const proof  = tree.getProof(leaf);
-
-    console.log(tree.verify(proof, leaf, root));
-
-    // block.txRoot     =
-
-    for (let tx of transactions) {
-        tx = helpers.toTxObject(rlp.decode(tx));
+    for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
+        const txHash = transactions[txIndex];
+        const tx     = helpers.toTxObject(rlp.decode(txHash));
 
         console.log('tx', tx);
 
@@ -162,12 +155,20 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
             }
         }
 
-        // 1. Form receipt.
-        // 2. Update receipts.
+        const receipt = {
+            blockHash:        block.hash,
+            blockNumber:      block.number,
+            transactionHash:  txHash,
+            transactionIndex: txIndex,
+            from:             tx.from,
+            to:               tx.to
+        };
+
+        block.receipts.push(receipt);
     }
 
-    // block.stateRoot    =
-    // block.receiptsRoot =
+    block.stateRoot    = merkleRoot(block.state.map(account => JSON.stringify(account)));
+    block.receiptsRoot = merkleRoot(block.receipts.map(receipt => JSON.stringify(receipt)));
 
     return block;
 };
@@ -190,4 +191,17 @@ function isVote(data) {
  */
 function isStake(data) {
     return data.slice(0, 2 + helpers.METHOD_SIGNATURE_LENGTH) === helpers.encodeTxData(STAKE_METHOD_SIG);
+}
+
+/**
+ * Generate merkle tree root.
+ *
+ * @param  {String[]} rawLeaves
+ * @return {String}             Tree root.
+ */
+function merkleRoot(rawLeaves) {
+    const leaves = rawLeaves.map(rawLeaf => keccak256(rawLeaf));
+    const tree   = new MerkleTree(leaves, keccak256);
+
+    return '0x' + tree.getRoot().toString('hex');
 }
