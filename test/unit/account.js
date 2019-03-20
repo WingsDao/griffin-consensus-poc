@@ -9,6 +9,7 @@ require('chai').should();
 const rlp     = require('rlp');
 const Account = require('core/account');
 const helpers = require('lib/helpers');
+const genesis = require('core/genesis');
 
 describe('Accounts', () => {
     let account = {};
@@ -16,6 +17,8 @@ describe('Accounts', () => {
 
     const AMOUNT_TO_STAKE = 100;
     const AMOUNT_TO_VOTE  = 100;
+
+    let transactions = [];
 
     before('create', () => {
         account = Account();
@@ -48,6 +51,8 @@ describe('Accounts', () => {
 
         console.log('Standard serialized tx:', serializedTx);
 
+        transactions.push(serializedTx);
+
         const decodedTx = rlp.decode(serializedTx);
 
         const tx = helpers.toTxObject(decodedTx);
@@ -59,11 +64,25 @@ describe('Accounts', () => {
         const serializedTx = account.vote('0x' + target.address.toString('hex'), AMOUNT_TO_STAKE);
 
         console.log('Vote serialized tx:', serializedTx);
+
+        transactions.push(serializedTx);
     });
 
     it('stake tx', () => {
         const serializedTx = account.stake(AMOUNT_TO_VOTE);
 
         console.log('Stake serialized tx:', serializedTx);
+
+        transactions.push(serializedTx);
+    });
+
+    it('produce first block', () => {
+        const block = account.produceBlock(genesis, transactions);
+
+        console.log('New block:', block);
+    });
+
+    xit('produce second block', () => {
+
     });
 });
