@@ -110,8 +110,9 @@ const identifiableLayer = (function initIdentifiableLayer() {
             throw new IdentityLayerError('Unable to process message contents: ' + contents.toString());
         }
 
-        if (groups.concat([TRANSPORT_ID, TARGET_ALL]).includes(msg.target) && msg.sender !== TRANSPORT_ID) {
+        if (groups.concat([TRANSPORT_ID, TARGET_ALL]).includes(msg.target)) {
             emitter.emit('message', msg, meta);
+            emitter.emit(msg.content.type, msg.content.data, msg, meta);
             knownNodes.set(msg.sender, meta);
         }
     });
