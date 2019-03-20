@@ -37,7 +37,7 @@ require('client/observer');
 
     return wait(TIMEOUT).then(newBlock);
 
-})(null);
+})();
 
 
 (async function newTx() {
@@ -50,7 +50,6 @@ require('client/observer');
 
     await transport.send({type: events.NEW_TRANSACTION, data: serializedTx});
 
-    return pool.add(serializedTx)
-        .then(() => wait(TIMEOUT / 4))
-        .then(newTx);
+    return wait(TIMEOUT / 4).then(newTx);
+
 })();
