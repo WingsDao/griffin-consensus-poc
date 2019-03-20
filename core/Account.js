@@ -5,7 +5,6 @@
 'use strict';
 
 const MerkleTree    = require('merkletreejs');
-const rlp           = require('rlp');
 const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
@@ -127,10 +126,10 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.txRoot     = merkleRoot(transactions);
 
     for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
-        const txHash = transactions[txIndex];
-        const tx     = helpers.toTxObject(rlp.decode(txHash));
+        const serializedTx = transactions[txIndex];
+        const tx           = helpers.toTxObject(serializedTx);
 
-        console.log('tx', tx);
+        // console.log('tx', tx);
 
         switch (true) {
             case isVote(tx.data): {
@@ -158,7 +157,7 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
         const receipt = {
             blockHash:        block.hash,
             blockNumber:      block.number,
-            transactionHash:  txHash,
+            transactionHash:  '0x' + keccak256(serializedTx).toString('hex'),
             transactionIndex: txIndex,
             from:             tx.from,
             to:               tx.to

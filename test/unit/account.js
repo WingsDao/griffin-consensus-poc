@@ -6,7 +6,6 @@
 
 require('chai').should();
 
-const rlp     = require('rlp');
 const Account = require('core/account');
 const helpers = require('lib/helpers');
 const genesis = require('core/genesis');
@@ -53,9 +52,7 @@ describe('Accounts', () => {
 
         transactions.push(serializedTx);
 
-        const decodedTx = rlp.decode(serializedTx);
-
-        const tx = helpers.toTxObject(decodedTx);
+        const tx = helpers.toTxObject(serializedTx);
 
         console.log('tx object', tx);
     });
