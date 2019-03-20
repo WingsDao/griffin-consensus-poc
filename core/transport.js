@@ -8,39 +8,6 @@
 const dgram  = require('dgram');
 const events = require('events');
 
-// Sort of OSI model in this scenario
-//
-// - Network transport in general
-// - UDP transport level (all the messages, no filtration) - pure dgram from NodeJS package
-// - Managed transport level - Transport library, which will wrap the UDP multicast and will make it usable
-// - Highest level - blockchain interfaces (aka Transaction)
-
-// What else do we have here?
-//
-// Let's describe protocol principles:
-//
-// Multicast sends message to everyone, including self.
-// - Somehow we have to filter messages from self (or not? tricky one)
-// There will be groups of transport nodes (delegates, block-producers)
-// - Each message must be filterable by target (group, transportID or broadcast to everyone - * (asterisk))
-// There gonna be a lot of messages around the network so we have to format messages accordingly
-// - Type, Target, Sender, Content (specific for each Type) and maybe something more
-
-// RBD:
-//
-// I want it to:
-//
-// - transport.send()
-// - transport.on('message', function onMessage() { /* ... */ })
-// - new Transport() (MB, not sure)
-//
-// Maybe there should be a higher abstraction level like:
-//
-// client.on('transaction') ~ transport.on('message', function (e) { if (e.type === 'TRANSACTION') emit(e); })
-//
-// If so we should create and keep in mind message structure which in this scenario MUST include e.type
-// That's the least we can do for higher abstractions
-
 /**
  * Address of multicast. Must be in range: 224.0.0.0 -> 239.255.255.255
  * @see {@link https://www.iana.org/assignments/multicast-addresses/multicast-addresses.xhtml}
