@@ -123,6 +123,15 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.producer   = '0x' + this.address.toString('hex');
     block.state      = parentBlock.state    || [];
     block.receipts   = parentBlock.receipts || [];
+
+    const leaves = transactions.map(tx => keccak256(tx));
+    const tree   = new MerkleTree(leaves, keccak256);
+    const root   = tree.getRoot().toString('hex');
+    const leaf   = keccak256(transactions[0]);
+    const proof  = tree.getProof(leaf);
+
+    console.log(tree.verify(proof, leaf, root));
+
     // block.txRoot     =
 
     for (let tx of transactions) {
