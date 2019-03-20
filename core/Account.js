@@ -125,6 +125,25 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.receipts   = parentBlock.receipts || [];
     block.txRoot     = merkleRoot(transactions);
 
+    // genesis block state initiation
+    if (parentBlock.alloc) {
+        for (const allocObject of parentBlock.alloc) {
+            const address = Object.keys(allocObject)[0];
+            const account = {
+                address,
+                balance: allocObject[address].balance,
+                nonce:  0,
+                rating: 0,
+                cerificates: [],
+                votes:       []
+            };
+
+            console.log('account', account);
+
+            block.state.push(account);
+        }
+    }
+
     for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
         const serializedTx = transactions[txIndex];
         const tx           = helpers.toTxObject(serializedTx);
@@ -151,6 +170,16 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
                 // handle as normal tx
 
                 // 1. Update the state.
+
+                // check whether sender exists
+                // if (block.state.find())
+
+                // check whether senders balance > value
+                // check whether receiver exists ? nothing : create receiver
+
+                // if value > 0
+                //   sub value from sender
+                //   add value to receiver
             }
         }
 
