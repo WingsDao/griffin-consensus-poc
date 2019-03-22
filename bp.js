@@ -18,7 +18,16 @@ const events    = require('lib/events');
  */
 const TIMEOUT = 1000;
 
-const producer = Account();
+/**
+ * Secret key used for testing.
+ *
+ * @type {String}
+ */
+const SECRET_KEY = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c3b9f489f7085cb50', 'hex');
+
+const producer = Account(SECRET_KEY);
+
+console.log(producer.secretKey.toString('hex'));
 
 console.log('producer', {address: '0x' + producer.address.toString('hex'), publicKey: '0x' + producer.publicKey.toString('hex')});
 
