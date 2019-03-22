@@ -10,6 +10,7 @@ const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
 const helpers       = require('lib/helpers');
 const ethereumTx    = require('ethereumjs-tx');
+const ethRpc        = require('eth-json-rpc')('http://localhost:8545');
 
 module.exports = Account;
 
@@ -147,10 +148,7 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
 
         switch (true) {
             case isVote(tx.data): {
-                // handle as vote
-
-                const delegate = ''; // TODO decode tx data and get address of delegate from it
-                const votes    = 0;  // TODO decode tx data and get votes from it
+                const [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
 
                 sender.balance -= votes;
                 sender.locked  += votes;
@@ -163,9 +161,7 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
                 break;
             }
             case isStake(tx.data): {
-                // hadle as stake
-
-                const amount = 0; // TODO decode tx data and get amount from it
+                const amount = ethRpc.utils.decodeRawOutput(['uint256'], tx.data.slice(10));
 
                 const nCertificates = Math.floor(amount / CERTIFICATE_PRICE);
                 const totalPrice    = nCertificates * CERTIFICATE_PRICE;
@@ -266,7 +262,7 @@ function emptyAccount(address, balance=0) {
         locked: 0,
         nonce:  0,
         rating: 0,
-        cerificates: [],
+        certificates: [],
         votes:       []
     };
 }
