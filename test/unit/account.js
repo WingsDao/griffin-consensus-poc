@@ -6,22 +6,28 @@
 
 require('chai').should();
 
-const rlp     = require('rlp');
 const Account = require('core/account');
 const helpers = require('lib/helpers');
-const genesis = require('core/genesis');
+const genesis = require('genesis');
+
+/**
+ * Secret key used for testing.
+ *
+ * @type {String}
+ */
+const SECRET_KEY = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c3b9f489f7085cb50', 'hex');
 
 describe('Accounts', () => {
     let account = {};
     let target  = {};
 
-    const AMOUNT_TO_STAKE = 100;
+    const AMOUNT_TO_STAKE = 200;
     const AMOUNT_TO_VOTE  = 100;
 
     let transactions = [];
 
     before('create', () => {
-        account = Account();
+        account = Account(SECRET_KEY);
         target  = Account();
     });
 
@@ -53,11 +59,11 @@ describe('Accounts', () => {
 
         transactions.push(serializedTx);
 
-        const decodedTx = rlp.decode(serializedTx);
-
-        const tx = helpers.toTxObject(decodedTx);
+        const tx = helpers.toTxObject(serializedTx);
 
         console.log('tx object', tx);
+
+        tx.from.should.be.equal('0x' + account.address.toString('hex'));
     });
 
     it('vote tx', () => {
@@ -79,7 +85,7 @@ describe('Accounts', () => {
     it('produce first block', () => {
         const block = account.produceBlock(genesis, transactions);
 
-        console.log('New block:', block);
+        console.log('New block:', block.state[0]);
     });
 
     xit('produce second block', () => {

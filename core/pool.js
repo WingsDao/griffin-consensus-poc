@@ -50,6 +50,23 @@ exports.add = function add(data) {
 };
 
 /**
+ * Remove transactions from pool
+ *
+ * @param  {Array}   [toRem=[]] Array of transactions to remove
+ * @return {Promise}
+ */
+exports.remove = function remove(toRem = []) {
+    if (toRem.constructor !== Array) {
+        toRem = [toRem];
+    }
+
+    return exports.getAll()
+        .then((txs) => new Set(txs))
+        .then((set) => toRem.map((e) => set.delete(e)) && Array.from(set))
+        .then((res) => prom(fs.writeFile)(PATH, res.join('\n')));
+};
+
+/**
  * Get all the transactions in pool
  *
  * @return {Promise<Array>}
@@ -63,7 +80,7 @@ exports.getAll = function getAll() {
  *
  * @return {Promise}
  */
-exports.empty = function emptyPool() {
+exports.drain = function drainPool() {
     return prom(fs.truncate)(PATH);
 };
 

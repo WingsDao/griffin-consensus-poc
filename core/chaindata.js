@@ -4,9 +4,10 @@
 
 'use strict';
 
-const fs   = require('fs');
-const path = require('path');
-const prom = require('util').promisify;
+const fs      = require('fs');
+const path    = require('path');
+const prom    = require('util').promisify;
+const genesis = require('genesis.json');
 
 /**
  * Directory where local/chain data is stored
@@ -59,7 +60,7 @@ exports.add = function add(data) {
  * @return {Promise<Array>}
  */
 exports.getAll = function getAll() {
-    return prom(fs.readFile)(PATH).then((data) => data.toString().split('\n').slice(0, -1));
+    return prom(fs.readFile)(PATH).then((data) => [genesis].concat(data.toString().split('\n').slice(0, -1).map(JSON.parse)));
 };
 
 /**
@@ -69,7 +70,7 @@ exports.getAll = function getAll() {
  * @return {Promise<?Object>}        Requested block or null
  */
 exports.getBlock = function getBlock(number) {
-    return exports.getAll().then((blocks) => blocks[number] && JSON.parse(blocks[number]) || null);
+    return exports.getAll().then((blocks) => blocks[number]);
 };
 
 /**
@@ -78,7 +79,7 @@ exports.getBlock = function getBlock(number) {
  * @return {Promise<?Object>} Latest block or null
  */
 exports.getLatest = function getLatestBlock() {
-    return exports.getAll().then((blocks) => blocks[blocks.length - 1]).then((res) => res && JSON.parse(res) || null);
+    return exports.getAll().then((blocks) => blocks[blocks.length - 1]);
 };
 
 /**

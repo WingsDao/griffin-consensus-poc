@@ -5,12 +5,12 @@
 'use strict';
 
 const MerkleTree    = require('merkletreejs');
-const rlp           = require('rlp');
 const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
 const helpers       = require('lib/helpers');
 const ethereumTx    = require('ethereumjs-tx');
+const ethRpc        = require('eth-json-rpc')('http://localhost:8545');
 
 module.exports = Account;
 
@@ -25,18 +25,23 @@ const VOTE_METHOD_SIG  = 'vote(address,uint256)';
 const STAKE_METHOD_SIG = 'stake(uint256)';
 
 /**
+ * Certificate price.
+ *
+ * @type {Number}
+ */
+const CERTIFICATE_PRICE = 100;
+
+/**
  * General account @class.
  */
-function Account() {
+function Account(secretKey) {
     if (!new.target) {
-        return new Account();
+        return new Account(secretKey);
     }
 
-    let secretKey;
-
-    do {
+    while (!secretKey || !secp256k1.privateKeyVerify(secretKey)) {
         secretKey = randomBytes(32);
-    } while (!secp256k1.privateKeyVerify(secretKey));
+    }
 
     const publicKey = secp256k1.publicKeyCreate(Buffer.from(secretKey, 'hex'), false).slice(1);
     const address   = keccak256(publicKey).slice(12);
@@ -45,9 +50,9 @@ function Account() {
         secretKey:    {value: secretKey},
         publicKey:    {value: publicKey},
         address:      {value: address},
-        nonce:        {value: '0x00'},
-        balance:      {value: '0x00'},
-        rating:       {value: '0x00'},
+        nonce:        {value: 0},
+        balance:      {value: 0},
+        rating:       {value: 0},
         certificates: {value: []},
         votes:        {value: []}
     });
@@ -126,39 +131,76 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.receipts   = parentBlock.receipts || [];
     block.txRoot     = merkleRoot(transactions);
 
-    for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
-        const txHash = transactions[txIndex];
-        const tx     = helpers.toTxObject(rlp.decode(txHash));
+    // genesis block state initiation
+    if (parentBlock.alloc) {
+        for (const allocObject of parentBlock.alloc) {
+            const address = Object.keys(allocObject)[0];
+            block.state.push(emptyAccount(address, allocObject[address].balance));
+        }
+    }
 
-        console.log('tx', tx);
+    for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
+        const serializedTx = transactions[txIndex];
+        const tx           = helpers.toTxObject(serializedTx);
+        const sender       = block.state.find(account => account.address === tx.from);
+
+        if (!sender) { throw 'Sender account doesn\'t exist'; }
 
         switch (true) {
             case isVote(tx.data): {
-                // handle as vote
+                const [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
 
-                // 1. Mark amount as locked (locking mechanism?).
+                sender.balance -= votes;
+                sender.locked  += votes;
+
+                sender.votes.push({
+                    delegate,
+                    amount: votes
+                });
 
                 break;
             }
             case isStake(tx.data): {
-                // hadle as stake
+                const amount = ethRpc.utils.decodeRawOutput(['uint256'], tx.data.slice(10));
 
-                // 1. Mark amount as locked (locking mechanism?).
-                // 2. Generate certificates (random?).
+                const nCertificates = Math.floor(amount / CERTIFICATE_PRICE);
+                const totalPrice    = nCertificates * CERTIFICATE_PRICE;
+
+                if (sender.balance < totalPrice) { throw 'Sender doesn\'t have enough coin in his purse.'; }
+
+                sender.balance -= totalPrice;
+                sender.locked  += totalPrice;
+
+                for (let i = 0; i < nCertificates; i++) {
+                    sender.certificates.push('0x' + randomBytes(32).toString('hex'));
+                }
 
                 break;
             }
             default: {
                 // handle as normal tx
 
-                // 1. Update the state.
+                let receiver = block.state.find(account => account.address === tx.to);
+                const value  = parseInt(tx.value, 16);
+
+                if (value < 0) { throw 'Invalid value.'; }
+
+                if (sender.balance < value) { throw 'Sender doesn\'t have enough coin in his purse.'; }
+
+                if (!receiver) {
+                    receiver = emptyAccount(tx.to);
+                    block.state.push(receiver);
+                }
+
+                sender.balance   -= value;
+                receiver.balance += value;
             }
         }
 
         const receipt = {
             blockHash:        block.hash,
             blockNumber:      block.number,
-            transactionHash:  txHash,
+            transactionHash:  '0x' + keccak256(serializedTx).toString('hex'),
             transactionIndex: txIndex,
             from:             tx.from,
             to:               tx.to
@@ -204,4 +246,23 @@ function merkleRoot(rawLeaves) {
     const tree   = new MerkleTree(leaves, keccak256);
 
     return '0x' + tree.getRoot().toString('hex');
+}
+
+/**
+ * Freshly created account.
+ *
+ * @param  {String} address     Name which links thee to this world of blockchain.
+ * @param  {Number} [balance=0] Initial balance (positive in case of genesis allocation).
+ * @return {Object}             Empty account.
+ */
+function emptyAccount(address, balance=0) {
+    return {
+        address,
+        balance,
+        locked: 0,
+        nonce:  0,
+        rating: 0,
+        certificates: [],
+        votes:       []
+    };
 }
