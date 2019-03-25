@@ -135,7 +135,9 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     if (parentBlock.alloc) {
         for (const allocObject of parentBlock.alloc) {
             const address = Object.keys(allocObject)[0];
-            block.state.push(emptyAccount(address, allocObject[address].balance));
+            if (address !== ZERO_ADDRESS) {
+                block.state.push(emptyAccount(address, allocObject[address].balance));
+            }
         }
     }
 
