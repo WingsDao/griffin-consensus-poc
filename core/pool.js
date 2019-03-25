@@ -90,9 +90,28 @@ exports.drain = function drainPool() {
  * @return {Promise<?fs.Stat>} File stats
  */
 exports.stat = function stat() {
-    return prom(fs.stat)(path.join(DATADIR, FILENAME))
+    return prom(fs.stat)(PATH)
         .catch((err) => {
             if (err.code === 'ENOENT') { return null; }
             throw err;
         });
+};
+
+/**
+ * Create stream.Readable to pool
+ *
+ * @return {stream.Readable} Readable stream with file contents
+ */
+exports.createReadableStream = function createReadableStream() {
+    return fs.createReadStream(PATH);
+};
+
+/**
+ * Create stream.Writable to pool
+ *
+ * @param  {Boolean}         [append=true] Whether append-only mode (true) or to rewrite (false)
+ * @return {stream.Writable}               Writable stream
+ */
+exports.createWritableStream = function createWritableStream(append = true) {
+    return fs.createWriteStream(PATH, {flags: append && 'a+' || 'w'});
 };

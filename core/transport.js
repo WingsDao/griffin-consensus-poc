@@ -122,12 +122,13 @@ const identifiableLayer = (function initIdentifiableLayer() {
 
     emitter.on('message', function sendIdentityWhenRequestes(msg) {
         if (msg.content.type === NODE_ONLINE) {
+            console.log('New node online, sending handshake');
             emitter.send({type: HANDSHAKE}, msg.sender);
         }
     });
 
     transport.on('listening', function requestIdentities() {
-        emitter.send({type: NODE_ONLINE}, '*');
+        emitter.send(NODE_ONLINE, null, '*');
     });
 
     Object.defineProperties(emitter, {

@@ -10,13 +10,14 @@ const transport = require('core/transport');
 const pool      = require('core/pool');
 const chaindata = require('core/chaindata');
 const events    = require('lib/events');
+const peer      = require('core/file-peer');
 
 /**
  * Block producing timeout.
  *
  * @type {Number}
  */
-const TIMEOUT = 1000;
+const TIMEOUT = 5000;
 
 /**
  * Secret key used for testing.
@@ -44,9 +45,14 @@ require('client/observer');
 
     await chaindata.add(block);
 
-    console.log('new block', block);
 
-    transport.send(events.NEW_BLOCK, block);
+
+    console.log('new block', block.number);
+    console.log(JSON.stringify(block).length);
+
+    await streamBlock(block);
+
+    // transport.send(events.NEW_BLOCK, block);
 
     return wait(TIMEOUT).then(newBlock);
 
@@ -60,5 +66,18 @@ require('client/observer');
 
     await transport.send(events.NEW_TRANSACTION, serializedTx);
 
-    return wait(TIMEOUT / 4).then(newTx);
+    return wait(TIMEOUT / 2).then(newTx);
 })();
+
+async function streamBlock(block) {
+    const nodesCount = transport.knownNodes.size - 1;
+
+    if (nodesCount === 0) {
+        return null;
+    }
+
+    console.log('streaming new block to %d nodes', nodesCount);
+
+    const port = peer.peerString(block, nodesCount);
+    transport.send(events.NEW_BLOCK, port);
+}
