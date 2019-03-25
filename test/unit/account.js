@@ -9,6 +9,7 @@ require('chai').should();
 const Account = require('core/account');
 const helpers = require('lib/helpers');
 const genesis = require('genesis');
+const parser  = require('lib/parser');
 
 /**
  * Secret key used for testing.
@@ -82,10 +83,12 @@ describe('Accounts', () => {
         transactions.push(serializedTx);
     });
 
-    it('produce first block', () => {
+    it('produce first block and get list of delegates', () => {
         const block = account.produceBlock(genesis, transactions);
 
         console.log('New block:', block.state[0]);
+
+        console.log('Delegates', parser.getDelegates(block.state));
     });
 
     xit('produce second block', () => {
