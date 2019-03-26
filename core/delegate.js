@@ -6,34 +6,50 @@
 
 'use strict';
 
-const wait = require('util').promisify(setTimeout);
+const Delegate  = require('core/account');
+const transport = require('core/transport');
+const pool      = require('core/pool');
+const chaindata = require('core/chaindata');
+const events    = require('lib/events');
+
+// QUESTION store validator signatures in new block?
 
 /**
- * Block fetch timeout.
+ * Delegates group name.
  *
- * @type {Number}
+ * @type {String}
  */
-const TIMEOUT = 1000;
+const DELEGATES_GROUP = 'delegates';
 
-// XXX START XXX
-// get latest block
-// generate random number
-// cast random number to next delegate
+const randomNumber = Math.random();
 
-/**
- * Get new produced block.
- *
- * NOTE this can be done as event listener.
- */
-(function main() {
+transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
 
-    // TODO
-    // get block from block producer
-    // validate block
-    // broadcast block
-    // generate random number
-    // cast random number to next delegate
+(async function main() {
 
-    return wait(TIMEOUT).then(main);
+    // TODO get block from block producer
+    const block = {};
+
+    if (validate(block)) {
+        transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
+
+        const randomNumber = Math.random();
+
+        transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
+    } else {
+        // TODO case when the block is malformed
+    }
 
 })();
+
+/**
+ * Validate block.
+ *
+ * @param  {Object} block
+ * @return {Boolean}
+ */
+function validate(block) {
+    // TODO
+
+    return true;
+}
