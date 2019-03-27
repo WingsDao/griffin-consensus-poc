@@ -12,7 +12,8 @@ const ethRpc        = require('eth-json-rpc')('http://localhost:8545');
 const helpers       = require('lib/helpers');
 const constants     = require('lib/constants');
 
-exports.generateReceipt = generateReceipt;
+exports.generateReceipt  = generateReceipt;
+exports.getBlockProducer = getBlockProducer;
 
 /**
  * Initial allocation of account balances from genesis.
@@ -166,4 +167,23 @@ function isVote(data) {
  */
 function isStake(data) {
     return data.slice(0, 2 + helpers.METHOD_SIGNATURE_LENGTH) === helpers.encodeTxData(constants.STAKE_METHOD_SIG);
+}
+
+/**
+ * Get block producer by certificate number.
+ *
+ * @param  {Object} block
+ * @param  {Number} finalRandomNumber
+ * @return {String}                   Address of block producer.
+ */
+function getBlockProducer(block, finalRandomNumber) {
+    let i = 0;
+
+    for (const account of block.state) {
+        for (let _ = 0; _ < account.certificates.length; _++) {
+            if (i++ === finalRandomNumber) {
+                return account.address;
+            }
+        }
+    }
 }

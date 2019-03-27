@@ -6,10 +6,11 @@
 
 'use strict';
 
-const Delegate  = require('core/account');
-const transport = require('core/transport');
-const events    = require('lib/events');
-const helpers   = require('lib/helpers');
+const Delegate   = require('core/account');
+const transport  = require('core/transport');
+const blockchain = require('core/blockchain');
+const events     = require('lib/events');
+const helpers    = require('lib/helpers');
 
 // QUESTION store validator signatures in new block?
 
@@ -51,7 +52,7 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
     // TODO get block from block producer
     const block = {};
 
-    const finalRandomNumber = getRandomFromArray(randomNumbers);
+    const finalRandomNumber = helpers.getRandomFromArray(randomNumbers);
 
     if (isValidBlockProducer(block, finalRandomNumber) && isValidBlock(block)) {
         transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
@@ -76,26 +77,7 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
  * @return {Boolean}                   Whether block producer is a valid next BP or not.
  */
 function isValidBlockProducer(block, finalRandomNumber) {
-    let nextBlockProducer;
-    let i = 0;
-
-    for (const account of block.state) {
-        for (let _ = 0; _ < account.certificates.length; _++) {
-            if (i++ === finalRandomNumber) {
-                return block.producer === nextBlockProducer;
-            }
-        }
-    }
-}
-
-/**
- * Get random number from array of random numbers.
- *
- * @param  {Number[]} randomNumbers Random numbers of current round.
- * @return {Number}                 Final random number of current round.
- */
-function getRandomFromArray(randomNumbers) {
-    return randomNumbers[Math.floor(Math.random() * randomNumbers.length)];
+    return block.producer === blockchain.getBlockProducer(block, finalRandomNumber);
 }
 
 /**

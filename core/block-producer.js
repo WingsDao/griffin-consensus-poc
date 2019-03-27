@@ -10,6 +10,8 @@ const BlockProducer = require('core/account');
 const transport     = require('core/transport');
 const pool          = require('core/pool');
 const chaindata     = require('core/chaindata');
+const blockchain    = require('core/blockchain');
+const helpers       = require('lib/helpers');
 const events        = require('lib/events');
 
 /**
@@ -38,21 +40,28 @@ const blockProducer = BlockProducer(secretKey);
 
 (async function test() {
 
-    // get certain number of random numbers
-
     if (randomNumbers.length >= N_RANDOM_NUMBERS) {
-        // get certificate hash from random number
+        const finalRandomNumber = helpers.getRandomFromArray(randomNumbers);
 
-        const parentBlock = await chaindata.getLatest();
+        if (await blockProducer.isMyRound(finalRandomNumber)) {
+            const parentBlock  = await chaindata.getLatest();
+            const transactions = await pool.getAll();
 
-        // check whether its hash corresponds to one of owned certificates
-        // QUESTION how to get certificate hash from number?
+            const block = blockProducer.produceBlock(parentBlock, transactions);
 
-        const transactions = await pool.getAll();
-
-        const block = blockProducer.produceBlock(parentBlock, transactions);
-
-        transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)}, DELEGATES_GROUP);
+            transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)}, DELEGATES_GROUP);
+        }
     }
 
 })();
+
+/**
+ *
+ *
+ * @param  {Number} certificateNumber
+ * @return {Boolean}                  Whether c
+ */
+BlockProducer.prototype.isMyRound = async function isMyRound(certificateNumber) {
+    const block = await chaindata.getLatest();
+    return this.address === blockchain.getBlockProducer(block, certificateNumber);
+};
