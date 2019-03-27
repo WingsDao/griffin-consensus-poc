@@ -43,7 +43,7 @@ const blockProducer = BlockProducer(secretKey);
     if (randomNumbers.length >= N_RANDOM_NUMBERS) {
         // get certificate hash from random number
 
-        const parentBlock  = await chaindata.getLatest();
+        const parentBlock = await chaindata.getLatest();
 
         // check whether its hash corresponds to one of owned certificates
         // QUESTION how to get certificate hash from number?

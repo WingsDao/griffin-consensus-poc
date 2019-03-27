@@ -8,11 +8,10 @@
 
 const Delegate  = require('core/account');
 const transport = require('core/transport');
-const pool      = require('core/pool');
-const chaindata = require('core/chaindata');
 const events    = require('lib/events');
 
 // QUESTION store validator signatures in new block?
+// QUESTION how to validate block producer?
 
 /**
  * Delegates group name.
@@ -27,7 +26,10 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
 
 (async function main() {
 
-    // TODO get block from block producer
+    // TODO
+    // 1. get block from block producer
+    // 2. validate block producer
+
     const block = {};
 
     if (validate(block)) {
@@ -50,6 +52,9 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
  */
 function validate(block) {
     // TODO
+    // 1. check state
+    // 2. check tx root
+    // 3. check receipts root
 
     return true;
 }
