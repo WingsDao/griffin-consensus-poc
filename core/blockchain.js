@@ -10,7 +10,7 @@ const {randomBytes} = require('crypto');
 const keccak256     = require('keccak256');
 const ethRpc        = require('eth-json-rpc')('http://localhost:8545');
 const helpers       = require('lib/helpers');
-const constants     = require('core/constants');
+const constants     = require('lib/constants');
 
 exports.generateReceipt = generateReceipt;
 

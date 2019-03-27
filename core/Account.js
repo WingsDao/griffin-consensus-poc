@@ -9,7 +9,7 @@ const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
 const ethereumTx    = require('ethereumjs-tx');
 const helpers       = require('lib/helpers');
-const constants     = require('core/constants');
+const constants     = require('lib/constants');
 const blockchain    = require('core/blockchain');
 
 module.exports = Account;
