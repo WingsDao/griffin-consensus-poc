@@ -55,31 +55,25 @@ describe('Accounts', () => {
     });
 
     it('standard tx', () => {
-        const serializedTx = account.tx('0x' + target.address.toString('hex'), '0xff');
-
-        console.log('Standard serialized tx:', serializedTx);
+        const toAddress    = '0x' + target.address.toString('hex');
+        const serializedTx = account.tx(toAddress, '0xff');
 
         transactions.push(serializedTx);
 
         const tx = helpers.toTxObject(serializedTx);
 
-        console.log('tx object', tx);
-
         tx.from.should.be.equal('0x' + account.address.toString('hex'));
+        tx.to.should.be.equal(toAddress);
     });
 
     it('vote tx', () => {
         const serializedTx = account.vote('0x' + target.address.toString('hex'), AMOUNT_TO_STAKE);
-
-        console.log('Vote serialized tx:', serializedTx);
 
         transactions.push(serializedTx);
     });
 
     it('stake tx', () => {
         const serializedTx = account.stake(AMOUNT_TO_VOTE);
-
-        console.log('Stake serialized tx:', serializedTx);
 
         transactions.push(serializedTx);
     });

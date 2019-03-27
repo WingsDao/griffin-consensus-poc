@@ -86,7 +86,9 @@ function handleTx(tx, block) {
 function handleVote(tx, block) {
     const sender = block.state.find(account => account.address === tx.from);
 
-    const [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
+    let [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
+
+    votes = +votes;
 
     sender.balance -= votes;
     sender.locked  += votes;
