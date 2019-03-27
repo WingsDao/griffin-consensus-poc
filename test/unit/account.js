@@ -88,9 +88,10 @@ describe('Accounts', () => {
 
         console.log('New block:', block.state[0]);
 
-        console.log('Delegates:', parser.getDelegates(block.state));
+        const normalizedState = parser(block.state);
 
-        console.log('Amount of certificates:', parser.getCertificatesAmount(block.state));
+        console.log('Delegates:', normalizedState.delegates);
+        console.log('Amount of certificates:', normalizedState.totalCertificates);
     });
 
     xit('produce second block', () => {
