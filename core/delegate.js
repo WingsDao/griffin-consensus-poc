@@ -9,9 +9,9 @@
 const Delegate  = require('core/account');
 const transport = require('core/transport');
 const events    = require('lib/events');
+const helpers   = require('lib/helpers');
 
 // QUESTION store validator signatures in new block?
-// QUESTION how to validate block producer?
 
 /**
  * Delegates group name.
@@ -20,8 +20,14 @@ const events    = require('lib/events');
  */
 const DELEGATES_GROUP = 'delegates';
 
+const delegate = Delegate(secretKey);
+
 const randomNumber = Math.random();
 
+// TODO store random numbers of current round to be able to verify
+// next block producer.
+
+// TODO sign message with validators private key.
 transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
 
 (async function main() {
@@ -32,7 +38,7 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
 
     const block = {};
 
-    if (validate(block)) {
+    if (isValidBlock(block)) {
         transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
 
         const randomNumber = Math.random();
@@ -47,14 +53,13 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
 /**
  * Validate block.
  *
- * @param  {Object} block
- * @return {Boolean}
+ * @param  {Object}  producedBlock Block produced by BP.
+ * @return {Boolean}               Whether block is valid or not.
  */
-function validate(block) {
-    // TODO
-    // 1. check state
-    // 2. check tx root
-    // 3. check receipts root
+function isValidBlock(producedBlock) {
+    const block = delegate.produceBlock();
 
-    return true;
+    return producedBlock.stateRoot === helpers.merkleRoot(producedBlock.transactions)
+        && producedBlock.stateRoot === block.stateRoot
+        && producedBlock.receiptsRoot === block.receiptsRoot;
 }
