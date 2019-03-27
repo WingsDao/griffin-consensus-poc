@@ -8,22 +8,23 @@
 
 process.stdin.resume();
 
-const messenger = require('client/messenger');
-const events    = require('lib/events');
-const tp        = require('core/transport');
-const peer      = require('core/file-peer');
-const chain     = require('core/chaindata');
-const pool      = require('core/pool');
+const events = require('lib/events');
+const tp     = require('core/transport');
+const peer   = require('core/file-peer');
+const chain  = require('core/chaindata');
+const pool   = require('core/pool');
 
-const waiter    = require('client/messenger');
+const waiter = require('network/waiter');
 
 const wait = require('util').promisify(setTimeout);
-
-require('client/observer');
 
 (async function initServices() {
 
     await wait(3500);
+
+    console.log('Node info:');
+    console.log(' - chain filename is %s', chain.FILENAME);
+    console.log(' - pool  filename is %s', pool.FILENAME);
 
     // More than one node in network
     if (tp.knownNodes.size > 1) {
@@ -33,81 +34,66 @@ require('client/observer');
             syncPool()
         ]);
 
-
-    } else {
-
-
+        console.log('Node is synced and ready to receive new blocks');
 
     }
 
-})();
+})().then(function runClient() {
+
+    console.log('Starting observer');
+
+    require('network/observer');
+
+    tp.on(events.NEW_BLOCK, function newBlock({block}, msg) {
+        console.log('Received block: %s', JSON.stringify(block));
+        console.log('Message:');
+        console.log(msg);
+    });
+
+});
+
+const WAIT_FOR = 3000;
+
+
 
 
 async function syncPool() {
 
     tp.send(events.REQUEST_POOL);
 
-    const nodes  = await waiter.waitForAll(events.SHARE_POOL, 10, 3000);
+    const nodes  = await waiter.waitForAll(events.SHARE_POOL, 10, WAIT_FOR);
     const myNode = nodes.sort((a, b) => a.data - b.data)[0];
 
     tp.send(events.CREATE_POOL_SERVER, null, myNode.msg.sender);
 
-    console.log('pool synced');
-}
+    const peerData = await waiter.waitFor(events.POOL_SERVER_CREATED, WAIT_FOR);
+    const peerPort = peerData.data;
 
+    console.log('Pool port is %d', peerPort);
+
+    if (peerPort !== null) {
+        await peer.pull('localhost', peerPort, pool.createWritableStream(false)).catch(console.error);
+    } else {
+        console.log('No pool peer was created in %d ms time', WAIT_FOR);
+    }
+
+}
 
 async function syncChain() {
 
     tp.send(events.REQUEST_CHAIN, null, '*');
 
-    const nodes  = await waiter.waitForAll(events.SHARE_CHAIN, 10, 3000);
-    const myNode = nodes[0];
+    const responses  = await waiter.waitForAll(events.SHARE_CHAIN, 10, 3000);
+    const oneAndOnly = responses[0];
 
-    if (!myNode) {
-        return;
+    tp.send(events.CREATE_CHAINDATA_SERVER, null, oneAndOnly.msg.sender);
+
+    const peerData = await waiter.waitFor(events.CHAINDATA_SERVER_CREATED, WAIT_FOR);
+    const peerPort = peerData.data;
+
+    if (peerPort !== null) {
+        await peer.pull('localhost', peerPort, chain.createWritableStream(false)).catch(console.error);
+    } else {
+        console.log('No chaindata peer was created in %d ms time', WAIT_FOR);
     }
-
-    tp.send(events.CREATE_CHAINDATA_SERVER, null, myNode.msg.sender);
-
-    console.log('chain synced');
 }
-
-// (function () {
-//
-//     if (nodesInNetwork) {
-//         //
-//     }
-//
-//     emit('Request pool');
-//     waitFor('I can');
-//     emit('Okay, you do it');
-//     waitFor('Here are your server details');
-//
-//     pullDataFromPeer();
-//
-//     if (failed && few_nodes_around) {
-//         repeat();
-//     }
-// })();
-
-// sync handshake mechanics
-//
-// 1. Request pool data
-// 2. Find perfect candidate (SIMPLE SOLUTION FIRST)
-// 3. Send him request
-// 4. Receive confirmation with peer data
-// 5. Pool data from peer
-// 6. On pool end peer closed, connection ended
-
-// exports.syncPool = async function syncPool() {
-//
-//     setImmediate(() => console.log('message sent') || msg.send(evts.REQUEST_POOL));
-//
-//     await pool.drain();
-//
-//     const promise = console.log('awaiting') || waitForAll(evts.SHARE_POOL);
-//     const results = await promise;
-//
-//     console.log('received', results);
-//
-// };

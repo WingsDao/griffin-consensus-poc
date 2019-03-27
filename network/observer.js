@@ -1,5 +1,5 @@
 /**
- * @module services/observer
+ * @module network/observer
  */
 
 'use strict';
@@ -12,12 +12,11 @@ const chaindata = require('core/chaindata');
 
 require('core/transport')
 
-    .on(events.NEW_BLOCK, async function newBlock(port, msg) {
+    .on(events.NEW_BLOCK, async function newBlock({port}, msg) {
         if (msg.sender !== this.transportId) {
-            await peer.pull('localhost', port, chaindata.createWritableStream()).catch(console.error);
-
-            console.log((await chaindata.getAll()).map((b) => b.number));
-            console.log((await chaindata.getLatest()).number);
+            const stream = chaindata.createWritableStream();
+            stream.write('\n');
+            await peer.pull('localhost', port, stream).catch(console.error);
         }
     })
 
@@ -34,8 +33,8 @@ require('core/transport')
 
     .on(events.REQUEST_CHAIN, async function chainRequested(data, msg) {
         if (msg.sender !== this.transportId) {
-            // const lastBlock = await chaindata.getLatest();
-            this.send(events.SHARE_CHAIN, null, msg.sender);
+            const lastBlock = await chaindata.getLatest();
+            this.send(events.SHARE_CHAIN, lastBlock.number, msg.sender);
         }
     })
 
@@ -51,14 +50,5 @@ require('core/transport')
             const port = peer.peer(chaindata.createReadableStream());
             this.send(events.CHAINDATA_SERVER_CREATED, port, msg.sender);
         }
-    })
-
-    .on(events.POOL_SERVER_CREATED, async function (port) {
-        await pool.drain();
-        await peer.pull('localhost', port, pool.createWritableStream(false)).catch(console.error);
-    })
-
-    .on(events.CHAINDATA_SERVER_CREATED, async function (port) {
-        await peer.pull('localhost', port, chaindata.createWritableStream(false)).catch(console.error);
     })
 ;

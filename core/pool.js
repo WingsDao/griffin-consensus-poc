@@ -23,7 +23,7 @@ const DATADIR = process.env.DATADIR || 'data';
  *
  * @type {String}
  */
-const FILENAME = process.env.POOL_FILENAME || 'pool';
+const FILENAME = exports.FILENAME = process.env.POOL_FILENAME || 'pool_' + require('crypto').randomBytes(2).toString('hex');
 
 /**
  * Full path (joined DIRNAME and FILENAME)

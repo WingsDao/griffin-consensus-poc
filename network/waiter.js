@@ -1,5 +1,5 @@
 /**
- * @module client/messenger
+ * @module network/waiter
  */
 
 'use strict';
@@ -39,14 +39,14 @@ async function waitForAll(evt, count = 1, wait = 1000) {
  *
  * @param  {String}  evt         Name of the event to wait for
  * @param  {Number}  [wait=1000] Max wait time after which Promise is rejected
- * @return {Promise}             Promise with event data when succeeded
+ * @return {Promise}             Promise with event data when succeeded and with null when not
  */
 async function waitFor(evt, wait = 1000) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         msg.once(evt, function (data, msg, meta) {
             resolve({data, msg, meta});
         });
 
-        setTimeout(reject, wait);
+        setTimeout(resolve.bind(null, null), wait);
     });
 }

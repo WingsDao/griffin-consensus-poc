@@ -24,7 +24,7 @@ const DATADIR = process.env.DATADIR || 'data';
  *
  * @type {String}
  */
-const FILENAME = process.env.CHAINDATA_FILENAME || 'chain';
+const FILENAME = exports.FILENAME = process.env.CHAINDATA_FILENAME || 'chain_' + require('crypto').randomBytes(2).toString('hex');
 
 /**
  * Full path (joined DIRNAME and FILENAME)

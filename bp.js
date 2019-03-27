@@ -29,10 +29,9 @@ const SECRET_KEY = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c
 const producer = Account(SECRET_KEY);
 
 console.log(producer.secretKey.toString('hex'));
-
 console.log('producer', {address: '0x' + producer.address.toString('hex'), publicKey: '0x' + producer.publicKey.toString('hex')});
 
-require('client/observer');
+require('network/observer');
 
 (async function newBlock() {
 
@@ -48,7 +47,6 @@ require('client/observer');
 
 
     console.log('new block', block.number);
-    console.log(JSON.stringify(block).length);
 
     await streamBlock(block);
 
@@ -76,8 +74,14 @@ async function streamBlock(block) {
         return null;
     }
 
-    console.log('streaming new block to %d nodes', nodesCount);
+    console.log('streaming new block %d to %d nodes', block.number, nodesCount);
 
     const port = peer.peerString(block, nodesCount);
-    transport.send(events.NEW_BLOCK, port);
+    transport.send(events.NEW_BLOCK, {
+        port, block: {
+            number:     block.number,
+            hash:       block.hash,
+            parentHash: block.parentHash
+        }
+    });
 }
