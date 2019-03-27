@@ -9,6 +9,7 @@ require('chai').should();
 const Account = require('core/account');
 const helpers = require('lib/helpers');
 const genesis = require('genesis');
+const parser  = require('lib/parser');
 
 /**
  * Secret key used for testing.
@@ -20,6 +21,7 @@ const SECRET_KEY = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c
 describe('Accounts', () => {
     let account = {};
     let target  = {};
+    let block   = {};
 
     const AMOUNT_TO_STAKE = 200;
     const AMOUNT_TO_VOTE  = 100;
@@ -82,10 +84,17 @@ describe('Accounts', () => {
         transactions.push(serializedTx);
     });
 
-    it('produce first block', () => {
-        const block = account.produceBlock(genesis, transactions);
+    it('produce first block and get list of delegates', () => {
+        block = account.produceBlock(genesis, transactions);
 
         console.log('New block:', block.state[0]);
+    });
+
+    it('parse block state', () => {
+        const normalizedState = parser(block.state);
+
+        console.log('Delegates:', normalizedState.delegates);
+        console.log('Amount of certificates:', normalizedState.totalCertificates);
     });
 
     xit('produce second block', () => {
