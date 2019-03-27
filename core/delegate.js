@@ -20,7 +20,8 @@ const helpers   = require('lib/helpers');
  */
 const DELEGATES_GROUP = 'delegates';
 
-const delegate = Delegate(secretKey);
+const secretKey = '';
+const delegate  = Delegate(secretKey);
 
 // random number generated in current round
 let randomNumber = Math.random();
@@ -33,19 +34,15 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
 
 (async function main() {
 
-    // TODO
-    // 1. get block from block producer
-    // 2. validate block producer
-
+    // TODO get block from block producer
     const block = {};
 
-    const finalRandomNumber = 0;
+    const finalRandomNumber = getRandomFromArray(randomNumbers);
 
     if (isValidBlockProducer(block, finalRandomNumber) && isValidBlock(block)) {
         transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
     } else {
         // in case when block is malformed we start round again
-
         randomNumbers = [];
     }
 
@@ -75,6 +72,16 @@ function isValidBlockProducer(block, finalRandomNumber) {
             }
         }
     }
+}
+
+/**
+ * Get random number from array of random numbers.
+ *
+ * @param  {Number[]} randomNumbers Random numbers of current round.
+ * @return {Number}                 Final random number of current round.
+ */
+function getRandomFromArray(randomNumbers) {
+    return randomNumbers[Math.floor(Math.random() * randomNumbers.length)];
 }
 
 /**
