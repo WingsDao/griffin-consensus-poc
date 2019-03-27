@@ -4,32 +4,15 @@
 
 'use strict';
 
-const MerkleTree    = require('merkletreejs');
 const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
-const helpers       = require('lib/helpers');
 const ethereumTx    = require('ethereumjs-tx');
-const ethRpc        = require('eth-json-rpc')('http://localhost:8545');
+const helpers       = require('lib/helpers');
+const constants     = require('core/constants');
+const blockchain    = require('core/blockchain');
 
 module.exports = Account;
-
-/**
- * Zero address (20 zero bytes with 0x prefix).
- *
- * @type {String}
- */
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-const VOTE_METHOD_SIG  = 'vote(address,uint256)';
-const STAKE_METHOD_SIG = 'stake(uint256)';
-
-/**
- * Certificate price.
- *
- * @type {Number}
- */
-const CERTIFICATE_PRICE = 100;
 
 /**
  * General account @class.
@@ -95,9 +78,9 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
  * @return {String}         Serialized signed transaction.
  */
 Account.prototype.vote = function vote(address, amount) {
-    const data = helpers.encodeTxData(VOTE_METHOD_SIG, [address, amount]);
+    const data = helpers.encodeTxData(constants.VOTE_METHOD_SIG, [address, amount]);
 
-    return this.tx(ZERO_ADDRESS, amount, data);
+    return this.tx(constants.ZERO_ADDRESS, amount, data);
 };
 
 /**
@@ -108,9 +91,9 @@ Account.prototype.vote = function vote(address, amount) {
  * @return {String}        Serialized signed transaction.
  */
 Account.prototype.stake = function stake(amount) {
-    const data = helpers.encodeTxData(STAKE_METHOD_SIG, [amount]);
+    const data = helpers.encodeTxData(constants.STAKE_METHOD_SIG, [amount]);
 
-    return this.tx(ZERO_ADDRESS, amount, data);
+    return this.tx(constants.ZERO_ADDRESS, amount, data);
 };
 
 /**
@@ -123,205 +106,33 @@ Account.prototype.stake = function stake(amount) {
 Account.prototype.produceBlock = function produceBlock(parentBlock, transactions) {
     let block = {};
 
-    block.number     = parentBlock.number + 1;
-    block.parentHash = parentBlock.hash;
-    block.hash       = '0x' + keccak256(parentBlock.hash).toString('hex');
-    block.producer   = '0x' + this.address.toString('hex');
-    block.state      = parentBlock.state    || [];
-    block.receipts   = parentBlock.receipts || [];
-    block.txRoot     = merkleRoot(transactions);
+    block.number       = parentBlock.number + 1;
+    block.parentHash   = parentBlock.hash;
+    block.hash         = '0x' + keccak256(parentBlock.hash).toString('hex');
+    block.producer     = '0x' + this.address.toString('hex');
+    block.state        = parentBlock.state    || [];
+    block.transactions = transactions;
+    block.receipts     = parentBlock.receipts || [];
+    block.txRoot       = helpers.merkleRoot(transactions);
 
     if (parentBlock.alloc) {
-        block = genesisAllocation(parentBlock, block);
+        block = blockchain.genesisAllocation(parentBlock, block);
     }
 
     for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
-        const serializedTx = transactions[txIndex];
+        const serializedTx = block.transactions[txIndex];
         const tx           = helpers.toTxObject(serializedTx);
         const sender       = block.state.find(account => account.address === tx.from);
 
         if (!sender) { throw 'Sender account doesn\'t exist'; }
 
-        if (isVote(tx.data)) {
-            block = handleVote(tx, block);
-        } else if (isStake(tx.data)) {
-            block = handleStake(tx, block);
-        } else {
-            block = handleTx(tx, block);
-        }
+        block = blockchain.handleTransaction(tx, block);
 
-        block.receipts.push(generateReceipt(block, tx, serializedTx, txIndex));
+        block.receipts.push(blockchain.generateReceipt(block, txIndex, serializedTx, tx));
     }
 
-    block.stateRoot    = merkleRoot(block.state.map(account => JSON.stringify(account)));
-    block.receiptsRoot = merkleRoot(block.receipts.map(receipt => JSON.stringify(receipt)));
+    block.stateRoot    = helpers.merkleRoot(block.state.map(account => JSON.stringify(account)));
+    block.receiptsRoot = helpers.merkleRoot(block.receipts.map(receipt => JSON.stringify(receipt)));
 
     return block;
 };
-
-/**
- * Initial allocation of account balances from genesis.
- *
- * @param  {Object}  genesisBlock Genesis block.
- * @param  {Object}  block
- * @return {Object}
- */
-function genesisAllocation(genesisBlock, block) {
-    for (const allocObject of genesisBlock.alloc) {
-        const address = Object.keys(allocObject)[0];
-        if (address !== ZERO_ADDRESS) {
-            block.state.push(emptyAccount(address, allocObject[address].balance));
-        }
-    }
-
-    return block;
-}
-
-/**
- * Handle standard transaction.
- *
- * @param  {String} tx
- * @param  {Object} block
- * @return {Object}
- */
-function handleTx(tx, block) {
-    const sender = block.state.find(account => account.address === tx.from);
-    let receiver = block.state.find(account => account.address === tx.to);
-    const value  = parseInt(tx.value, 16);
-
-    if (value < 0) { throw 'Invalid value.'; }
-
-    if (sender.balance < value) { throw 'Sender doesn\'t have enough coin in his purse.'; }
-
-    if (!receiver) {
-        receiver = emptyAccount(tx.to);
-        block.state.push(receiver);
-    }
-
-    sender.balance   -= value;
-    receiver.balance += value;
-
-    return block;
-}
-
-/**
- * Handle vote transaction.
- *
- * @param  {String} tx
- * @param  {Object} block
- * @return {Object}
- */
-function handleVote(tx, block) {
-    const sender = block.state.find(account => account.address === tx.from);
-
-    const [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
-
-    sender.balance -= votes;
-    sender.locked  += votes;
-
-    sender.votes.push({
-        delegate,
-        amount: votes
-    });
-
-    return block;
-}
-
-/**
- * Handle stake transaction.
- *
- * @param  {String} tx
- * @param  {Object} block
- * @return {Object}
- */
-function handleStake(tx, block) {
-    const sender = block.state.find(account => account.address === tx.from);
-
-    const amount = ethRpc.utils.decodeRawOutput(['uint256'], tx.data.slice(10));
-
-    const nCertificates = Math.floor(amount / CERTIFICATE_PRICE);
-    const totalPrice    = nCertificates * CERTIFICATE_PRICE;
-
-    if (sender.balance < totalPrice) { throw 'Sender doesn\'t have enough coin in his purse.'; }
-
-    sender.balance -= totalPrice;
-    sender.locked  += totalPrice;
-
-    for (let i = 0; i < nCertificates; i++) {
-        sender.certificates.push('0x' + randomBytes(32).toString('hex'));
-    }
-
-    return block;
-}
-
-/**
- * Generate transaction receipt.
- *
- * @param  {Object} block
- * @param  {Object} tx
- * @param  {String} serializedTx
- * @param  {Number} transactionIndex
- * @return {Object}
- */
-function generateReceipt(block, tx, serializedTx, transactionIndex) {
-    return {
-        blockHash:        block.hash,
-        blockNumber:      block.number,
-        transactionHash:  '0x' + keccak256(serializedTx).toString('hex'),
-        transactionIndex,
-        from:             tx.from,
-        to:               tx.to
-    };
-}
-
-/**
- * Check whether tx action is vote.
- *
- * @param  {String}  data Transaction data.
- * @return {Boolean}
- */
-function isVote(data) {
-    return data.slice(0, 2 + helpers.METHOD_SIGNATURE_LENGTH) === helpers.encodeTxData(VOTE_METHOD_SIG);
-}
-
-/**
- * Check whether tx action is stake.
- *
- * @param  {String}  data Transaction data.
- * @return {Boolean}
- */
-function isStake(data) {
-    return data.slice(0, 2 + helpers.METHOD_SIGNATURE_LENGTH) === helpers.encodeTxData(STAKE_METHOD_SIG);
-}
-
-/**
- * Generate merkle tree root.
- *
- * @param  {String[]} rawLeaves
- * @return {String}             Tree root.
- */
-function merkleRoot(rawLeaves) {
-    const leaves = rawLeaves.map(rawLeaf => keccak256(rawLeaf));
-    const tree   = new MerkleTree(leaves, keccak256);
-
-    return '0x' + tree.getRoot().toString('hex');
-}
-
-/**
- * Freshly created account.
- *
- * @param  {String} address     Name which links thee to this world of blockchain.
- * @param  {Number} [balance=0] Initial balance (positive in case of genesis allocation).
- * @return {Object}             Empty account.
- */
-function emptyAccount(address, balance=0) {
-    return {
-        address,
-        balance,
-        locked: 0,
-        nonce:  0,
-        rating: 0,
-        certificates: [],
-        votes:       []
-    };
-}
