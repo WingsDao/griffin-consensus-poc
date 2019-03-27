@@ -22,10 +22,11 @@ const DELEGATES_GROUP = 'delegates';
 
 const delegate = Delegate(secretKey);
 
-const randomNumber = Math.random();
+// random number generated in current round
+let randomNumber = Math.random();
 
-// TODO store random numbers of current round to be able to verify
-// next block producer.
+// random numbers of current round
+let randomNumbers = [];
 
 // TODO sign message with validators private key.
 transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
@@ -38,17 +39,43 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
 
     const block = {};
 
-    if (isValidBlock(block)) {
+    const finalRandomNumber = 0;
+
+    if (isValidBlockProducer(block, finalRandomNumber) && isValidBlock(block)) {
         transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)});
-
-        const randomNumber = Math.random();
-
-        transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
     } else {
-        // TODO case when the block is malformed
+        // in case when block is malformed we start round again
+
+        randomNumbers = [];
     }
 
+    randomNumber = Math.random();
+
+    transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
+
 })();
+
+/**
+ * Validate block producer.
+ *
+ * NOTE this can be done much more gracefully.
+ *
+ * @param  {Object}  block             Block produced by BP.
+ * @param  {Number}  finalRandomNumber Final random number of current round.
+ * @return {Boolean}                   Whether block producer is a valid next BP or not.
+ */
+function isValidBlockProducer(block, finalRandomNumber) {
+    let nextBlockProducer;
+    let i = 0;
+
+    for (const account of block.state) {
+        for (let _ = 0; _ < account.certificates.length; _++) {
+            if (i++ === finalRandomNumber) {
+                return block.producer === nextBlockProducer;
+            }
+        }
+    }
+}
 
 /**
  * Validate block.

@@ -1,5 +1,5 @@
 /**
- * @module account
+ * @module core/account
  */
 
 'use strict';
