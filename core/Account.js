@@ -131,14 +131,8 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.receipts   = parentBlock.receipts || [];
     block.txRoot     = merkleRoot(transactions);
 
-    // genesis block state initiation
     if (parentBlock.alloc) {
-        for (const allocObject of parentBlock.alloc) {
-            const address = Object.keys(allocObject)[0];
-            if (address !== ZERO_ADDRESS) {
-                block.state.push(emptyAccount(address, allocObject[address].balance));
-            }
-        }
+        block = genesisAllocation(parentBlock, block);
     }
 
     for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
@@ -148,67 +142,15 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
 
         if (!sender) { throw 'Sender account doesn\'t exist'; }
 
-        switch (true) {
-            case isVote(tx.data): {
-                const [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
-
-                sender.balance -= votes;
-                sender.locked  += votes;
-
-                sender.votes.push({
-                    delegate,
-                    amount: votes
-                });
-
-                break;
-            }
-            case isStake(tx.data): {
-                const amount = ethRpc.utils.decodeRawOutput(['uint256'], tx.data.slice(10));
-
-                const nCertificates = Math.floor(amount / CERTIFICATE_PRICE);
-                const totalPrice    = nCertificates * CERTIFICATE_PRICE;
-
-                if (sender.balance < totalPrice) { throw 'Sender doesn\'t have enough coin in his purse.'; }
-
-                sender.balance -= totalPrice;
-                sender.locked  += totalPrice;
-
-                for (let i = 0; i < nCertificates; i++) {
-                    sender.certificates.push('0x' + randomBytes(32).toString('hex'));
-                }
-
-                break;
-            }
-            default: {
-                // handle as normal tx
-
-                let receiver = block.state.find(account => account.address === tx.to);
-                const value  = parseInt(tx.value, 16);
-
-                if (value < 0) { throw 'Invalid value.'; }
-
-                if (sender.balance < value) { throw 'Sender doesn\'t have enough coin in his purse.'; }
-
-                if (!receiver) {
-                    receiver = emptyAccount(tx.to);
-                    block.state.push(receiver);
-                }
-
-                sender.balance   -= value;
-                receiver.balance += value;
-            }
+        if (isVote(tx.data)) {
+            block = handleVote(tx, block);
+        } else if (isStake(tx.data)) {
+            block = handleStake(tx, block);
+        } else {
+            block = handleTx(tx, block);
         }
 
-        const receipt = {
-            blockHash:        block.hash,
-            blockNumber:      block.number,
-            transactionHash:  '0x' + keccak256(serializedTx).toString('hex'),
-            transactionIndex: txIndex,
-            from:             tx.from,
-            to:               tx.to
-        };
-
-        block.receipts.push(receipt);
+        block.receipts.push(generateReceipt(block, tx, serializedTx, txIndex));
     }
 
     block.stateRoot    = merkleRoot(block.state.map(account => JSON.stringify(account)));
@@ -216,6 +158,121 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
 
     return block;
 };
+
+/**
+ * Initial allocation of account balances from genesis.
+ *
+ * @param  {Object}  genesisBlock Genesis block.
+ * @param  {Object}  block
+ * @return {Object}
+ */
+function genesisAllocation(genesisBlock, block) {
+    for (const allocObject of genesisBlock.alloc) {
+        const address = Object.keys(allocObject)[0];
+        if (address !== ZERO_ADDRESS) {
+            block.state.push(emptyAccount(address, allocObject[address].balance));
+        }
+    }
+
+    return block;
+}
+
+/**
+ * Handle standard transaction.
+ *
+ * @param  {String} tx
+ * @param  {Object} block
+ * @return {Object}
+ */
+function handleTx(tx, block) {
+    const sender = block.state.find(account => account.address === tx.from);
+    let receiver = block.state.find(account => account.address === tx.to);
+    const value  = parseInt(tx.value, 16);
+
+    if (value < 0) { throw 'Invalid value.'; }
+
+    if (sender.balance < value) { throw 'Sender doesn\'t have enough coin in his purse.'; }
+
+    if (!receiver) {
+        receiver = emptyAccount(tx.to);
+        block.state.push(receiver);
+    }
+
+    sender.balance   -= value;
+    receiver.balance += value;
+
+    return block;
+}
+
+/**
+ * Handle vote transaction.
+ *
+ * @param  {String} tx
+ * @param  {Object} block
+ * @return {Object}
+ */
+function handleVote(tx, block) {
+    const sender = block.state.find(account => account.address === tx.from);
+
+    const [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
+
+    sender.balance -= votes;
+    sender.locked  += votes;
+
+    sender.votes.push({
+        delegate,
+        amount: votes
+    });
+
+    return block;
+}
+
+/**
+ * Handle stake transaction.
+ *
+ * @param  {String} tx
+ * @param  {Object} block
+ * @return {Object}
+ */
+function handleStake(tx, block) {
+    const sender = block.state.find(account => account.address === tx.from);
+
+    const amount = ethRpc.utils.decodeRawOutput(['uint256'], tx.data.slice(10));
+
+    const nCertificates = Math.floor(amount / CERTIFICATE_PRICE);
+    const totalPrice    = nCertificates * CERTIFICATE_PRICE;
+
+    if (sender.balance < totalPrice) { throw 'Sender doesn\'t have enough coin in his purse.'; }
+
+    sender.balance -= totalPrice;
+    sender.locked  += totalPrice;
+
+    for (let i = 0; i < nCertificates; i++) {
+        sender.certificates.push('0x' + randomBytes(32).toString('hex'));
+    }
+
+    return block;
+}
+
+/**
+ * Generate transaction receipt.
+ *
+ * @param  {Object} block
+ * @param  {Object} tx
+ * @param  {String} serializedTx
+ * @param  {Number} transactionIndex
+ * @return {Object}
+ */
+function generateReceipt(block, tx, serializedTx, transactionIndex) {
+    return {
+        blockHash:        block.hash,
+        blockNumber:      block.number,
+        transactionHash:  '0x' + keccak256(serializedTx).toString('hex'),
+        transactionIndex,
+        from:             tx.from,
+        to:               tx.to
+    };
+}
 
 /**
  * Check whether tx action is vote.
