@@ -117,7 +117,7 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.txRoot       = helpers.merkleRoot(transactions);
 
     if (parentBlock.alloc) {
-        block = blockchain.genesisAllocation(parentBlock, block);
+        block = blockchain.initiateGenesisState(parentBlock, block);
     }
 
     for (let txIndex = 0; txIndex < transactions.length; txIndex++) {

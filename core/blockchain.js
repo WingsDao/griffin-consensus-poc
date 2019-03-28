@@ -22,7 +22,7 @@ exports.getBlockProducer = getBlockProducer;
  * @param  {Object}  block
  * @return {Object}
  */
-exports.genesisAllocation = function genesisAllocation(genesisBlock, block) {
+exports.initiateGenesisState = function initiateGenesisState(genesisBlock, block) {
     for (const allocObject of genesisBlock.alloc) {
         const address = Object.keys(allocObject)[0];
         if (address !== constants.ZERO_ADDRESS) {
@@ -180,7 +180,7 @@ function getBlockProducer(block, finalRandomNumber) {
     let i = 0;
 
     for (const account of block.state) {
-        for (let _ = 0; _ < account.certificates.length; _++) {
+        for (let j = 0; j < account.certificates.length; j++) {
             if (i++ === finalRandomNumber) {
                 return account.address;
             }

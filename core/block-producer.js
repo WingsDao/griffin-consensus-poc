@@ -14,6 +14,9 @@ const blockchain    = require('core/blockchain');
 const helpers       = require('lib/helpers');
 const events        = require('lib/events');
 
+
+// QUESTION how are first blocks after genesis produced?
+
 /**
  * Number of random number needed to get final random number.
  *
@@ -26,7 +29,7 @@ const N_RANDOM_NUMBERS = 2;
  *
  * @type {String}
  */
-const DELEGATES_GROUP = 'delegates';
+const DELEGATES_GROUP = exports.DELEGATES_GROUP = 'delegates';
 
 /**
  * Random numbers received from delegates.
@@ -38,7 +41,13 @@ const randomNumbers = [];
 const secretKey     = '';
 const blockProducer = BlockProducer(secretKey);
 
-(async function test() {
+// transport.send(events.RANDOM_NUMBER, {randomNumber: 20});
+// transport.send(events.RANDOM_NUMBER, {randomNumber: 10});
+
+transport.on(events.RANDOM_NUMBER, async (msg) => {
+    // TODO verify sender
+
+    randomNumbers.push(msg.randomNumber);
 
     if (randomNumbers.length >= N_RANDOM_NUMBERS) {
         const finalRandomNumber = helpers.getRandomFromArray(randomNumbers);
@@ -52,14 +61,13 @@ const blockProducer = BlockProducer(secretKey);
             transport.send({type: events.NEW_BLOCK, data: JSON.stringify(block)}, DELEGATES_GROUP);
         }
     }
-
-})();
+});
 
 /**
+ * Get current state.
  *
- *
- * @param  {Number} certificateNumber
- * @return {Boolean}                  Whether c
+ * @param  {Number} certificateNumber Selected certificate number.
+ * @return {Boolean}                  Whether current account was chosen as a BP or not.
  */
 BlockProducer.prototype.isMyRound = async function isMyRound(certificateNumber) {
     const block = await chaindata.getLatest();
