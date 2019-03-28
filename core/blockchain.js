@@ -39,15 +39,11 @@ exports.initiateGenesisState = function initiateGenesisState(genesisBlock, block
  * @return {Object}
  */
 exports.handleTransaction = function handleTransaction(tx, block) {
-    if (isVote(tx.data)) {
-        block = handleVote(tx, block);
-    } else if (isStake(tx.data)) {
-        block = handleStake(tx, block);
-    } else {
-        block = handleTx(tx, block);
+    switch (true) {
+        case isVote(tx.data):  return handleVote(tx, block);
+        case isStake(tx.data): return handleStake(tx, block);
+        default:               return handleTx(tx, block);
     }
-
-    return block;
 };
 
 /**
@@ -85,7 +81,7 @@ function handleTx(tx, block) {
  * @return {Object}
  */
 function handleVote(tx, block) {
-    const sender = block.state.find(account => account.address === tx.from);
+    const sender = block.state.find(account => (account.address === tx.from));
 
     let [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
 
