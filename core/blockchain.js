@@ -110,7 +110,7 @@ function handleVote(tx, block) {
  * @return {Object}
  */
 function handleStake(tx, block) {
-    const sender = block.state.find(account => account.address === tx.from);
+    const sender = block.state.find(account => (account.address === tx.from));
 
     const amount = ethRpc.utils.decodeRawOutput(['uint256'], tx.data.slice(10));
 

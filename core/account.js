@@ -4,7 +4,6 @@
 
 'use strict';
 
-const {randomBytes} = require('crypto');
 const secp256k1     = require('secp256k1');
 const keccak256     = require('keccak256');
 const ethereumTx    = require('ethereumjs-tx');
@@ -22,8 +21,8 @@ function Account(secretKey) {
         return new Account(secretKey);
     }
 
-    while (!secretKey || !secp256k1.privateKeyVerify(secretKey)) {
-        secretKey = randomBytes(32);
+    if (!secretKey) {
+        secretKey = helpers.generateSecretKey();
     }
 
     const publicKey = secp256k1.publicKeyCreate(Buffer.from(secretKey, 'hex'), false).slice(1);
