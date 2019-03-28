@@ -15,8 +15,7 @@ const chain  = require('core/chaindata');
 const pool   = require('core/pool');
 
 const waiter = require('network/waiter');
-
-const wait = require('util').promisify(setTimeout);
+const wait   = require('util').promisify(setTimeout);
 
 (async function initServices() {
 
@@ -52,11 +51,16 @@ const wait = require('util').promisify(setTimeout);
 
 });
 
+
+/**
+ * Max event wait time in syncs
+ * @type {Number}
+ */
 const WAIT_FOR = 3000;
 
-
-
-
+/**
+ * @return {Promise}
+ */
 async function syncPool() {
 
     tp.send(events.REQUEST_POOL);
@@ -79,6 +83,9 @@ async function syncPool() {
 
 }
 
+/**
+ * @return {Promise}
+ */
 async function syncChain() {
 
     tp.send(events.REQUEST_CHAIN, null, '*');

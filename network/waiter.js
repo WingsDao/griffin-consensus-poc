@@ -13,7 +13,7 @@ exports.waitForAll = waitForAll;
  * Wait for N number of emitted events or for K milliseconds.
  * This method helps collecting all emitted events in application
  *
- * @param  {String}  evt         Name of the event ro await in transport
+ * @param  {String}  evt         Name of the event to await in transport
  * @param  {Number}  [count=1]   Minimal suffisient number of responses to resolve Promise
  * @param  {Number}  [wait=1000] Number of milliseconds after which Promise will also be resolved
  * @return {Promise}             Array of objects within Promise
