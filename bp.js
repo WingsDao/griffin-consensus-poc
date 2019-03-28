@@ -31,7 +31,7 @@ const producer = Account(SECRET_KEY);
 console.log(producer.secretKey.toString('hex'));
 console.log('producer', {address: '0x' + producer.address.toString('hex'), publicKey: '0x' + producer.publicKey.toString('hex')});
 
-require('network/observer');
+require('services/observer');
 
 (async function newBlock() {
 

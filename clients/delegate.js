@@ -6,11 +6,12 @@
 
 'use strict';
 
+const events     = require('lib/events');
+const helpers    = require('lib/helpers');
 const Delegate   = require('core/account');
 const transport  = require('core/transport');
 const blockchain = require('core/blockchain');
-const events     = require('lib/events');
-const helpers    = require('lib/helpers');
+const sync       = require('services/sync');
 
 // QUESTION store validator signatures in new block?
 
@@ -47,7 +48,20 @@ let randomNumbers = [];
 // TODO sign message with validators private key.
 transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
 
-(async function main() {
+(async function init() {
+
+    // Sync with other nodes if there are
+    if (transport.knownNodes.size > 1) {
+        await Promise.all([sync.pool(), sync.chain()]);
+    }
+
+    console.log('Data synced');
+
+})().then(async function main() {
+
+    // Start observing the network
+    require('services/observer');
+
 
     // TODO get block from block producer
     const block = {};
@@ -65,7 +79,7 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
 
     transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP);
 
-})();
+});
 
 /**
  * Validate block producer.
@@ -77,7 +91,7 @@ transport.send({type: events.RANDOM_NUMBER, data: randomNumber}, DELEGATES_GROUP
  * @return {Boolean}                   Whether block producer is a valid next BP or not.
  */
 function isValidBlockProducer(block, finalRandomNumber) {
-    return block.producer === blockchain.getBlockProducer(block, finalRandomNumber);
+    return (block.producer === blockchain.getBlockProducer(block, finalRandomNumber));
 }
 
 /**
