@@ -14,12 +14,9 @@ const constants     = require('lib/constants');
 const blockchain    = require('core/blockchain');
 
 /**
+ * SECP256K1 prefix.
  *
- * SECP256K1 prefix
- *
- * More details could be found
- * https://bitcoin.stackexchange.com/questions/57855/c-secp256k1-what-do-prefixes-0x06-and-0x07-in-an-uncompressed-public-key-signif
- *
+ * @see {@link https://bitcoin.stackexchange.com/questions/57855/c-secp256k1-what-do-prefixes-0x06-and-0x07-in-an-uncompressed-public-key-signif}
  * @type {Buffer}
  */
 const SECP256K1_PREFIX = Buffer.from('04', 'hex');
@@ -83,44 +80,29 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
 };
 
 /**
+ * Signing message by account private key.
  *
- * Signing message by account
- *
- * @param {String} message Text message to sign
- * @return {Object} Message
+ * @param {String} message Text message to sign.
+ * @return {Buffer} Signature of message.
  */
 Account.prototype.signMessage = function signMessage(message) {
-    let signedMessage = {};
+    const hash = keccak256(Buffer.from(message));
 
-    signedMessage.publicKey = this.publicKey;
-    signedMessage.message = message;
-
-    let hash = keccak256(Buffer.from(message));
-    signedMessage.signature = secp256k1.sign(hash, this.secretKey).signature;
-
-    return signedMessage;
+    return secp256k1.sign(hash, this.secretKey).signature;
 }
 
 /**
+ * Verifying message signed by account.
  *
- * Verifying message signed by account
- *
- * @param {Object} Message object signed by signMessage function
- * @param {Buffer} Public key if signed message doesn't contain public key or need another public key
- *
- * @return {Boolean} Result of signature verification
+ * @param {String} message Message to verify.
+ * @param {Buffer} publicKey Public key of account that signed message.
+ * @param {Buffer} signature Signature of message.
+ * @return {Boolean} Result of signature verification.
  */
-Account.verifyMessage = function verifyMessage(signedMessage, publicKey) {
-    let pbK = publicKey || signedMessage.publicKey;
+Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
+    const hash = keccak256(Buffer.from(message));
 
-    if (!pbK) {
-        throw 'You use provide public key as function parameter or as part of signed message';
-    }
-
-    let hash = keccak256(Buffer.from(signedMessage.message));
-
-
-    return secp256k1.verify(hash, signedMessage.signature, Buffer.concat([SECP256K1_PREFIX, pbK]));
+    return secp256k1.verify(hash, signature, Buffer.concat([SECP256K1_PREFIX, publicKey]));
 }
 
 /**
