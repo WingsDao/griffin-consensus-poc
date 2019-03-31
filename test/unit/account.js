@@ -22,9 +22,11 @@ describe('Accounts', () => {
     let account = {};
     let target  = {};
     let block   = {};
+    let signedMessage = {};
 
     const AMOUNT_TO_STAKE = 200;
     const AMOUNT_TO_VOTE  = 100;
+    const MESSAGE = 'hello, this is some message';
 
     let transactions = [];
 
@@ -89,6 +91,37 @@ describe('Accounts', () => {
 
         console.log('Delegates:', normalizedState.delegates);
         console.log('Amount of certificates:', normalizedState.totalCertificates);
+    });
+
+    it('sign message with account secret key', () => {
+        signedMessage = account.signMessage(MESSAGE);
+
+        signedMessage.message.should.be.string;
+        signedMessage.signature.length.should.be.equal(64);
+        signedMessage.publicKey.length.should.be.equal(64);
+        console.log('Signed message: ', signedMessage);
+    });
+
+    it('verify signed message', () => {
+        const verified = Account.verifyMessage(signedMessage);
+        verified.should.be.true;
+    });
+
+    it('verify signed message by public key', () => {
+        const verified = Account.verifyMessage(signedMessage, account.publicKey);
+        verified.should.be.true;
+    });
+
+    it('verify signed message with wrong message', () => {
+        signedMessage.message = 'not that message';
+        const verified = Account.verifyMessage(signedMessage);
+        signedMessage.message = MESSAGE;
+        verified.should.be.false;
+    });
+
+    it('verify signed message with wrong public key', () => {
+        const verified = Account.verifyMessage(signedMessage, target.publicKey);
+        verified.should.be.false;
     });
 
     xit('produce second block', () => {
