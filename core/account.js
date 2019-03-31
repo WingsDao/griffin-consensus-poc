@@ -15,7 +15,7 @@ const blockchain    = require('core/blockchain');
 
 /**
  *
- * Our SECP256K1 prefix
+ * SECP256K1 prefix
  *
  * More details could be found
  * https://bitcoin.stackexchange.com/questions/57855/c-secp256k1-what-do-prefixes-0x06-and-0x07-in-an-uncompressed-public-key-signif
