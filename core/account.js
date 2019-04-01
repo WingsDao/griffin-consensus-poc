@@ -6,12 +6,12 @@
 
 'use strict';
 
-const secp256k1     = require('secp256k1');
-const keccak256     = require('keccak256');
-const ethereumTx    = require('ethereumjs-tx');
-const helpers       = require('lib/helpers');
-const constants     = require('lib/constants');
-const blockchain    = require('core/blockchain');
+const secp256k1  = require('secp256k1');
+const keccak256  = require('keccak256');
+const ethereumTx = require('ethereumjs-tx');
+const helpers    = require('lib/helpers');
+const constants  = require('lib/constants');
+const blockchain = require('core/blockchain');
 
 /**
  * SECP256K1 prefix.
@@ -82,8 +82,8 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
 /**
  * Signing message by account private key.
  *
- * @param {String} message Text message to sign.
- * @return {Buffer} Signature of message.
+ * @param  {String} message Text message to sign.
+ * @return {Buffer}         Signature of message.
  */
 Account.prototype.signMessage = function signMessage(message) {
     const hash = keccak256(Buffer.from(message));
@@ -94,10 +94,10 @@ Account.prototype.signMessage = function signMessage(message) {
 /**
  * Verifying message signed by account.
  *
- * @param {String} message Message to verify.
- * @param {Buffer} publicKey Public key of account that signed message.
- * @param {Buffer} signature Signature of message.
- * @return {Boolean} Result of signature verification.
+ * @param  {String}  message   Message to verify.
+ * @param  {Buffer}  publicKey Public key of account that signed message.
+ * @param  {Buffer}  signature Signature of message.
+ * @return {Boolean}           Result of signature verification.
  */
 Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
     const hash = keccak256(Buffer.from(message));
