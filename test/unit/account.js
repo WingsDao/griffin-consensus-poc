@@ -22,9 +22,11 @@ describe('Accounts', () => {
     let account = {};
     let target  = {};
     let block   = {};
+    let signature = null;
 
     const AMOUNT_TO_STAKE = 200;
     const AMOUNT_TO_VOTE  = 100;
+    const MESSAGE = 'hello, this is some message';
 
     let transactions = [];
 
@@ -89,6 +91,28 @@ describe('Accounts', () => {
 
         console.log('Delegates:', normalizedState.delegates);
         console.log('Amount of certificates:', normalizedState.totalCertificates);
+    });
+
+    it('sign message with account secret key', () => {
+        signature = account.signMessage(MESSAGE);
+
+        signature.length.should.be.equal(64);
+        console.log('Signature: ', signature);
+    });
+
+    it('verify signed message', () => {
+        const verified = Account.verifyMessage(MESSAGE, account.publicKey, signature);
+        verified.should.be.true;
+    });
+
+    it('verify signed message with wrong message', () => {
+        const verified = Account.verifyMessage('not that message', account.publicKey, signature);
+        verified.should.be.false;
+    });
+
+    it('verify signed message with wrong public key', () => {
+        const verified = Account.verifyMessage(MESSAGE, target.publicKey, signature);
+        verified.should.be.false;
     });
 
     xit('produce second block', () => {
