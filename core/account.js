@@ -16,7 +16,7 @@ const blockchain = require('core/blockchain');
 /**
  * SECP256K1 prefix.
  *
- * @see {@link https://bitcoin.stackexchange.com/questions/57855/c-secp256k1-what-do-prefixes-0x06-and-0x07-in-an-uncompressed-public-key-signif}
+ * @see  {@link https://bitcoin.stackexchange.com/questions/57855/c-secp256k1-what-do-prefixes-0x06-and-0x07-in-an-uncompressed-public-key-signif}
  * @type {Buffer}
  */
 const SECP256K1_PREFIX = Buffer.from('04', 'hex');
