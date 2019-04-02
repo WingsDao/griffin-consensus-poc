@@ -1,7 +1,7 @@
 {
   "name": "griffin-consensus-poc",
   "version": "1.0.0",
-  "description": "",
+  "description": "Griffin is blockchain consensus based on a combination of Delegated Proof of Stake (DPoS) and Block Producers (PoS)",
   "main": "index.js",
   "scripts": {
     "test": "NODE_PATH=. mocha test"
@@ -11,8 +11,8 @@
     "url": "git+https://github.com/wingsdao/griffin-consensus-poc.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Wings Stiftung",
+  "license": "GPLv3",
   "bugs": {
     "url": "https://github.com/wingsdao/griffin-consensus-poc/issues"
   },
