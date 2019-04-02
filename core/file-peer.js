@@ -4,8 +4,7 @@
 
 'use strict';
 
-const http     = require('http');
-const Readable = require('stream').Readable;
+const http = require('http');
 
 /**
  * Create one-request server on random port with given file contents
@@ -32,18 +31,6 @@ exports.peer = function createFileServer(fileStream, connections = 1, aliveFor =
     return port;
 };
 
-exports.peerString = function createBufferServer(string, connections = 1) {
-    const stream = new Readable;
-
-    if (string instanceof Object) {
-        string = JSON.stringify(string);
-    }
-
-    stream.push(string);
-    stream.push(null);
-
-    return exports.peer(stream, connections);
-};
 
 /**
  * Pull data from peer to file via HTTP
@@ -59,6 +46,52 @@ exports.pull = function pullFromPeer(host, port, stream) {
         http.get({host, port}, (res) => {
             res.pipe(stream);
             res.on('end', resolve);
+            res.on('error', reject);
+        });
+    });
+};
+
+/**
+ * Peer single string (usually a JSON) via creating short-time HTTP server
+ *
+ * @param  {String|Object} string          Data to peer (share via HTTP)
+ * @param  {Number}        [connections=1] Number of connections after which server is closed
+ * @param  {Number}        [aliveFor=5000] Number of ms to wait until server shutdown
+ * @return {Number}                        Port to peer from
+ */
+exports.peerString = function createBufferServer(string, connections = 1, aliveFor = 5000) {
+    if (string instanceof Object) {
+        string = JSON.stringify(string);
+    }
+
+    let pulls    = 0;
+    const port   = randomPort();
+    const server = http.createServer();
+
+    server.on('request', (req, res) => {
+        res.end(string);
+        (++pulls === connections) && server.close();
+    });
+
+    server.listen(port);
+    setTimeout(() => server.close(), aliveFor);
+
+    return port;
+};
+
+/**
+ * Pull data from peer via HTTP as Promise
+ *
+ * @param  {String}  host Host or IP to pull from
+ * @param  {Number}  port Port to request
+ * @return {Promise}      Promise with pulled data
+ */
+exports.pullString = function poolSingleString(host, port) {
+    return new Promise((resolve, reject) => {
+        http.get({host, port}, (res) => {
+            let result = '';
+            res.on('data', (chunk) => (result += chunk));
+            res.on('end',  ()      => resolve(result));
             res.on('error', reject);
         });
     });
