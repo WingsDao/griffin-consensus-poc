@@ -24,7 +24,15 @@ describe('Accounts', () => {
     let block   = {};
     let signature = null;
 
-    const AMOUNT_TO_VOTE  = 100;
+    /**
+     * Initial account balance.
+     * @see genesis.json
+     *
+     * @type {Number}
+     */
+    const INITIAL_AMOUNT = 100000000;
+    const AMOUNT_TO_SEND = 100;
+    const AMOUNT_TO_VOTE = 100;
     const MESSAGE = 'hello, this is some message';
 
     let transactions = [];
@@ -57,7 +65,7 @@ describe('Accounts', () => {
 
     it('standard tx', () => {
         const toAddress    = '0x' + target.address.toString('hex');
-        const serializedTx = account.tx(toAddress, '0xff');
+        const serializedTx = account.tx(toAddress, AMOUNT_TO_SEND);
 
         transactions.push(serializedTx);
 
@@ -79,15 +87,18 @@ describe('Accounts', () => {
         transactions.push(serializedTx);
     });
 
-    it('produce first block and get list of delegates', () => {
+    it('produce first block and verify state', () => {
         block = account.produceBlock(genesis, transactions);
 
-        console.log('New block:', block.state[0]);
+        const accountState = block.state[0];
 
-        // TODO Check state for:
-        // - change in balance after transfer
-        // - vote
-        // - certificate
+        console.log('Account state:', accountState);
+
+        const currentAmount = INITIAL_AMOUNT - AMOUNT_TO_SEND - AMOUNT_TO_VOTE;
+
+        accountState.balance.should.be.equal(currentAmount);
+        accountState.votes.includes('0x' + target.address.toString('hex')).should.be.true;
+        accountState.certificates.length.should.be.equal(1);
     });
 
     it('parse block state', () => {
