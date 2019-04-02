@@ -109,13 +109,12 @@ Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
  * Vote for delegate.
  *
  * @param  {String} address Address of delegate.
- * @param  {Number} amount  Amount to coins to use for vote.
  * @return {String}         Serialized signed transaction.
  */
-Account.prototype.vote = function vote(address, amount) {
-    const data = helpers.encodeTxData(constants.VOTE_METHOD_SIG, [address, amount]);
+Account.prototype.vote = function vote(address) {
+    const data = helpers.encodeTxData(constants.VOTE_METHOD_SIG, [address]);
 
-    return this.tx(constants.ZERO_ADDRESS, amount, data);
+    return this.tx(constants.ZERO_ADDRESS, 0, data);
 };
 
 /**

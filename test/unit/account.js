@@ -24,7 +24,6 @@ describe('Accounts', () => {
     let block   = {};
     let signature = null;
 
-    const AMOUNT_TO_STAKE = 200;
     const AMOUNT_TO_VOTE  = 100;
     const MESSAGE = 'hello, this is some message';
 
@@ -69,7 +68,7 @@ describe('Accounts', () => {
     });
 
     it('vote tx', () => {
-        const serializedTx = account.vote('0x' + target.address.toString('hex'), AMOUNT_TO_STAKE);
+        const serializedTx = account.vote('0x' + target.address.toString('hex'));
 
         transactions.push(serializedTx);
     });
@@ -84,6 +83,11 @@ describe('Accounts', () => {
         block = account.produceBlock(genesis, transactions);
 
         console.log('New block:', block.state[0]);
+
+        // TODO Check state for:
+        // - change in balance after transfer
+        // - vote
+        // - certificate
     });
 
     it('parse block state', () => {
