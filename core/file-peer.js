@@ -1,5 +1,19 @@
 /**
- * @module file-peer
+ * Main module for creating temporary HTTP server for sharing and steaming big data.
+ * As UDP is the main protocol inside this PoC and it has limitation of 65536 bytes per message.
+ *
+ * To share bigger data we use temporary HTTP servers.
+ * Server listens on random port in range 5000-9999.
+ *
+ * Each server has two shutdown conditions:
+ * - by number of requests (connections argument)
+ * - by timeout (aliveFor argument)
+ *
+ * When one of these conditions reached, server shuts down.
+ *
+ * QUESTION: we may return Promise that would end on http.Server 'close' event. Think about it!
+ *
+ * @module core/file-peer
  */
 
 'use strict';

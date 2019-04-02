@@ -5,9 +5,10 @@
 'use strict';
 
 const fs      = require('fs');
+const os      = require('os');
 const path    = require('path');
 const prom    = require('util').promisify;
-const genesis = require('genesis.json');
+const genesis = require(process.env.GENESIS_PATH || 'genesis.json');
 
 /**
  * Directory where local/chain data is stored
@@ -51,7 +52,7 @@ exports.add = function add(data) {
         data = JSON.stringify(data);
     }
 
-    return prom(fs.write)(fd, data.toString() + '\n');
+    return prom(fs.write)(fd, data.toString() + os.EOL);
 };
 
 /**
@@ -60,7 +61,9 @@ exports.add = function add(data) {
  * @return {Promise<Array>}
  */
 exports.getAll = function getAll() {
-    return prom(fs.readFile)(PATH).then((data) => [genesis].concat(data.toString().split('\n').slice(0, -1).map(JSON.parse)));
+    return prom(fs.readFile)(PATH)
+        .then((data) => [genesis].concat(data.toString().split(os.EOL).slice(0, -1).map(JSON.parse)))
+        .catch(()    => [genesis]);
 };
 
 /**

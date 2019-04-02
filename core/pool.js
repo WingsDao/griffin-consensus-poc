@@ -80,8 +80,10 @@ exports.getAll = function getAll() {
  *
  * @return {Promise}
  */
-exports.drain = function drainPool() {
-    return prom(fs.truncate)(PATH);
+exports.drain = async function drainPool() {
+    const all = await exports.getAll();
+    await prom(fs.truncate)(PATH);
+    return all;
 };
 
 /**
