@@ -6,12 +6,20 @@
 
 'use strict';
 
-const secp256k1     = require('secp256k1');
-const keccak256     = require('keccak256');
-const ethereumTx    = require('ethereumjs-tx');
-const helpers       = require('lib/helpers');
-const constants     = require('lib/constants');
-const blockchain    = require('core/blockchain');
+const secp256k1  = require('secp256k1');
+const keccak256  = require('keccak256');
+const ethereumTx = require('ethereumjs-tx');
+const helpers    = require('lib/helpers');
+const constants  = require('lib/constants');
+const blockchain = require('core/blockchain');
+
+/**
+ * SECP256K1 prefix.
+ *
+ * @see  {@link https://bitcoin.stackexchange.com/questions/57855/c-secp256k1-what-do-prefixes-0x06-and-0x07-in-an-uncompressed-public-key-signif}
+ * @type {Buffer}
+ */
+const SECP256K1_PREFIX = Buffer.from('04', 'hex');
 
 module.exports = Account;
 
@@ -72,16 +80,41 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
 };
 
 /**
+ * Signing message by account private key.
+ *
+ * @param  {String} message Text message to sign.
+ * @return {Buffer}         Signature of message.
+ */
+Account.prototype.signMessage = function signMessage(message) {
+    const hash = keccak256(Buffer.from(message));
+
+    return secp256k1.sign(hash, this.secretKey).signature;
+};
+
+/**
+ * Verifying message signed by account.
+ *
+ * @param  {String}  message   Message to verify.
+ * @param  {Buffer}  publicKey Public key of account that signed message.
+ * @param  {Buffer}  signature Signature of message.
+ * @return {Boolean}           Result of signature verification.
+ */
+Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
+    const hash = keccak256(Buffer.from(message));
+
+    return secp256k1.verify(hash, signature, Buffer.concat([SECP256K1_PREFIX, publicKey]));
+};
+
+/**
  * Vote for delegate.
  *
  * @param  {String} address Address of delegate.
- * @param  {Number} amount  Amount to coins to use for vote.
  * @return {String}         Serialized signed transaction.
  */
-Account.prototype.vote = function vote(address, amount) {
-    const data = helpers.encodeTxData(constants.VOTE_METHOD_SIG, [address, amount]);
+Account.prototype.vote = function vote(address) {
+    const data = helpers.encodeTxData(constants.VOTE_METHOD_SIG, [address]);
 
-    return this.tx(constants.ZERO_ADDRESS, amount, data);
+    return this.tx(constants.ZERO_ADDRESS, 0, data);
 };
 
 /**

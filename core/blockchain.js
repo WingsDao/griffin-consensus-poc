@@ -42,7 +42,7 @@ exports.handleTransaction = function handleTransaction(tx, block) {
     switch (true) {
         case isVote(tx.data):  return handleVote(tx, block);
         case isStake(tx.data): return handleStake(tx, block);
-        default:               return handleTx(tx, block);
+        default:               return handleStandardTransaction(tx, block);
     }
 };
 
@@ -53,7 +53,7 @@ exports.handleTransaction = function handleTransaction(tx, block) {
  * @param  {Object} block
  * @return {Object}
  */
-function handleTx(tx, block) {
+function handleStandardTransaction(tx, block) {
     const sender = block.state.find(account => account.address === tx.from);
     let receiver = block.state.find(account => account.address === tx.to);
     const value  = parseInt(tx.value, 16);
@@ -83,17 +83,11 @@ function handleTx(tx, block) {
 function handleVote(tx, block) {
     const sender = block.state.find(account => (account.address === tx.from));
 
-    let [delegate, votes] = ethRpc.utils.decodeRawOutput(['address', 'uint256'], tx.data.slice(10));
+    let [delegate] = ethRpc.utils.decodeRawOutput(['address'], tx.data.slice(10));
 
-    votes = +votes;
-
-    sender.balance -= votes;
-    sender.locked  += votes;
-
-    sender.votes.push({
-        delegate,
-        amount: votes
-    });
+    sender.votes = new Set(sender.votes);
+    sender.votes.add(delegate);
+    sender.votes = [...sender.votes];
 
     return block;
 }
