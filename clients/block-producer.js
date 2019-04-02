@@ -7,44 +7,33 @@
 'use strict';
 
 const events        = require('lib/events');
-const helpers       = require('lib/helpers');
 const pool          = require('core/pool');
 const BlockProducer = require('core/account');
 const tp            = require('core/transport');
 const chaindata     = require('core/chaindata');
-const blockchain    = require('core/blockchain');
 const sync          = require('services/sync');
 const waiter        = require('services/waiter');
-
 const peer          = require('core/file-peer');
 
 
 // QUESTION how are first blocks after genesis produced?
 
 /**
- * Number of random number needed to get final random number.
+ * Secret key of this exact node. Passed via env as SECRET_KEY.
  *
- * @type {Number}
- */
-const N_RANDOM_NUMBERS = 2;
-
-/**
- * Delegates group name.
- *
+ * ENV: SECRET_KEY
+ * @default ''
  * @type {String}
  */
-const DELEGATES_GROUP = exports.DELEGATES_GROUP = 'delegates';
+const secretKey = process.env.SECRET_KEY || '';
 
-/**
- * Random numbers received from delegates.
- *
- * @type {Array}
- */
-const randomNumbers = [];
-
-const secretKey     = '';
 const blockProducer = BlockProducer(secretKey);
 
+/**
+ * Number of Delegates in network to wait for
+ * @type {Number}
+ */
+const DELEGATES = +process.env.DELEGATES || 33;
 
 (async function init() {
 
@@ -53,46 +42,52 @@ const blockProducer = BlockProducer(secretKey);
         await Promise.all([sync.pool(), sync.chain()]);
     }
 
-    console.log('Data synced');
-
 })().then(async function main() {
 
     // Start observing network events
     require('services/observer');
 
-    console.log('Started observer');
-
+    // Attach block producer event listener
+    tp.on(events.START_ROUND, waitAndProduce);
 });
 
-const DELEGATES = +process.env.DELEGATES || 33;
 
-tp.on(events.START_ROUND, async function waitAndProduce() {
+/**
+ * This function is a generic listener for START_ROUND event from
+ * the side of block producer.
+ *
+ * @emits events.NEW_BLOCK 
+ *
+ * @async
+ * @listens events.START_ROUND
+ */
+async function waitAndProduce() {
 
-    console.log('Waiting for ya\'ll');
+    // On each round every block producer checks whether he should produce this block.
+    // We may want every bp to produce block every round.
+    // TODO: remember about backup block producer, as he have to produce as well in order to get block reward.
+    const isProducer = await isMyRound();
 
+    if (!isProducer) {
+        return;
+    }
+
+    // This event can take forever.
+    // TODO: think of time limitation for this part.
     const randoms = await waiter.waitForAll(events.BP_CATCH_IT, DELEGATES, Infinity);
 
-    console.log('Received random numbers!', randoms.map((r) => r.data).join());
-
-    const [parentBlock, transactions] = await Promise.all([chaindata.getLatest(), pool.drain()]);
-    const block                       = blockProducer.produceBlock(parentBlock, transactions);
+    // Drain a pool and create new block
+    const parentBlock  = await chaindata.getLatest();
+    const transactions = await pool.drain();
+    const block        = blockProducer.produceBlock(parentBlock, transactions);
 
     block.randomNumber = randoms[0].data;
 
-    await streamBlock(block);
-});
+    // Share block with delegates
+    // TODO: think of verification: do it in UDP short block or HTTP or both
+    const port = peer.peerString(block, DELEGATES);
 
-
-async function streamBlock(block) {
-    const nodesCount = tp.knownNodes.size - 1;
-
-    if (nodesCount === 0) {
-        return null;
-    }
-
-    console.log('streaming new block(%d) to %d nodes', block.number, nodesCount);
-
-    const port = peer.peerString(block, nodesCount);
+    // Send event so delegates know where to get block
     tp.send(events.VERIFY_BLOCK, {
         port, block: {
             number:     block.number,
@@ -103,36 +98,20 @@ async function streamBlock(block) {
     });
 }
 
-
-// tp.send(events.RANDOM_NUMBER, {randomNumber: 20});
-// tp.send(events.RANDOM_NUMBER, {randomNumber: 10});
-
-// tp.on(events.RANDOM_NUMBER, async (msg) => {
-//     // TODO verify sender
-//
-//     randomNumbers.push(msg.randomNumber);
-//
-//     if (randomNumbers.length >= N_RANDOM_NUMBERS) {
-//         const finalRandomNumber = helpers.getRandomFromArray(randomNumbers);
-//
-//         if (await blockProducer.isMyRound(finalRandomNumber)) {
-//             const parentBlock  = await chaindata.getLatest();
-//             const transactions = await pool.getAll();
-//
-//             const block = blockProducer.produceBlock(parentBlock, transactions);
-//
-//             tp.send({type: events.NEW_BLOCK, data: JSON.stringify(block)}, DELEGATES_GROUP);
-//         }
-//     }
-// });
-
 /**
  * Get current state.
+ *
+ * @TODO: implement this function according to PoC or LP.
  *
  * @param  {Number} certificateNumber Selected certificate number.
  * @return {Boolean}                  Whether current account was chosen as a BP or not.
  */
-// BlockProducer.prototype.isMyRound = async function isMyRound(certificateNumber) {
-//     const block = await chaindata.getLatest();
-//     return this.address === blockchain.getBlockProducer(block, certificateNumber);
-// };
+function isMyRound(certificateNumber) {
+
+    certificateNumber; // to not cause linter error while keeping function signature
+
+    // const block = await chaindata.getLatest();
+    // return this.address === blockchain.getBlockProducer(block, certificateNumber);
+
+    return true;
+}
