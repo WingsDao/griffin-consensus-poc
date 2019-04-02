@@ -4,8 +4,10 @@
 
 'use strict';
 
-const msg = require('core/transport');
+const msg  = require('core/transport');
+const wait = require('util').promisify(setTimeout);
 
+exports.wait       = wait;
 exports.waitFor    = waitFor;
 exports.waitForAll = waitForAll;
 
@@ -20,16 +22,17 @@ exports.waitForAll = waitForAll;
  */
 async function waitForAll(evt, count = 1, wait = 1000) {
     const result = [];
+    const finite = (wait !== Infinity);
 
     return new Promise((resolve) => {
         const success = () => { msg.removeListener(evt, listener); resolve(result); };
 
         function listener(data, msg, meta) {
-            (result.push({data, msg, meta}) === count) && success;
+            (result.push({data, msg, meta}) === count) && success();
         }
 
         msg.on(evt, listener);
-        setTimeout(success, wait);
+        finite && setTimeout(success, wait);
     });
 }
 
@@ -42,11 +45,13 @@ async function waitForAll(evt, count = 1, wait = 1000) {
  * @return {Promise}             Promise with event data when succeeded and with null when not
  */
 async function waitFor(evt, wait = 1000) {
+    const finite = (wait !== Infinity);
+
     return new Promise((resolve) => {
         msg.once(evt, function (data, msg, meta) {
             resolve({data, msg, meta});
         });
 
-        setTimeout(resolve.bind(null, null), wait);
+        finite && setTimeout(resolve.bind(null, null), wait);
     });
 }
