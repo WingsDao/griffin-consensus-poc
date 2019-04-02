@@ -89,7 +89,7 @@ Account.prototype.signMessage = function signMessage(message) {
     const hash = keccak256(Buffer.from(message));
 
     return secp256k1.sign(hash, this.secretKey).signature;
-}
+};
 
 /**
  * Verifying message signed by account.
@@ -103,7 +103,7 @@ Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
     const hash = keccak256(Buffer.from(message));
 
     return secp256k1.verify(hash, signature, Buffer.concat([SECP256K1_PREFIX, publicKey]));
-}
+};
 
 /**
  * Vote for delegate.
