@@ -4,8 +4,11 @@
 
 'use strict';
 
+const chai = require('chai');
+chai.use(require('chai-like'));
 require('chai').should();
 
+const fs      = require('fs');
 const rb      = require('crypto').randomBytes;
 const Genesis = require('lib/genesis');
 
@@ -47,6 +50,18 @@ describe('Create genesis', () => {
         const allocObject = findAllocatedObject(genesis, address);
 
         allocObject.balance.should.be.equal(amount);
+    });
+
+    it('save as file', () => {
+        const path = 'test/genesis.test.json';
+
+        genesis.writeToFile(path);
+
+        const genesisFromFile = require(path);
+
+        genesisFromFile.number.should.be.like(genesis.number);
+
+        fs.unlinkSync(path);
     });
 });
 
