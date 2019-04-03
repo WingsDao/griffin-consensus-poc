@@ -25,9 +25,16 @@ exports.getBlockProducer = getBlockProducer;
 exports.initiateGenesisState = function initiateGenesisState(genesisBlock, block) {
     for (const allocObject of genesisBlock.alloc) {
         const address = Object.keys(allocObject)[0];
-        if (address !== constants.ZERO_ADDRESS) {
-            block.state.push(helpers.emptyAccount(address, allocObject[address].balance));
-        }
+
+        const allocatedAccount = allocObject[address];
+
+        const account = helpers.emptyAccount(address);
+
+        account.balance      = allocatedAccount.balance      || 0;
+        account.votes        = allocatedAccount.votes        || [];
+        account.certificates = allocatedAccount.certificates || [];
+
+        block.state.push(account);
     }
 
     return block;
