@@ -34,7 +34,7 @@ const peer       = require('core/file-peer');
 //
 // TODO sign message with validators private key.
 
-const secretKey = process.env.SECRET_KEY || '';
+const secretKey = process.env.SECRET_KEY && Buffer.from(process.env.SECRET_KEY, 'hex') || null;
 const delegate  = Delegate(secretKey);
 
 

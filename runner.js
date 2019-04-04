@@ -68,7 +68,7 @@ process
  */
 function spawnKid(e, i) {
     const options = {
-        env: Object.assign(env, {SECRET_KEY: e.secretKey}),
+        env: Object.assign(env, {SECRET_KEY: e.secretKey.toString('hex')}),
         stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     };
 
