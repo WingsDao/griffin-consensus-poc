@@ -1,7 +1,7 @@
 # Wings Griffin Consensus PoC
-
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 [![Gitter](https://badges.gitter.im/WingsChat/community.svg)](https://gitter.im/WingsChat/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 
 # Description
 This is a Proof of Concept for "Griffin", a new consensus mechanism for Wings blockchain.
@@ -9,6 +9,11 @@ This is a Proof of Concept for "Griffin", a new consensus mechanism for Wings bl
 Griffin is based on a combination of Delegated Proof of Stake (DPoS) and Block Producers (PoS), allowing anyone to participate in securing the blockchain.
 
 THIS IS AN ALPHA LEVEL CODE, NOT TO BE USED IN PRODUCTION.
+
+
+## Contributors
+This project has the [following contributors](https://github.com/WingsDao/griffin-consensus-poc/graphs/contributors).
+
 
 ## License
 
