@@ -56,7 +56,7 @@ const DELEGATES = +process.env.DELEGATES || 33;
  * This function is a generic listener for START_ROUND event from
  * the side of block producer.
  *
- * @emits events.NEW_BLOCK 
+ * @emits events.NEW_BLOCK
  *
  * @async
  * @listens events.START_ROUND
@@ -85,7 +85,7 @@ async function waitAndProduce() {
 
     // Share block with delegates
     // TODO: think of verification: do it in UDP short block or HTTP or both
-    const port = peer.peerString(block, DELEGATES);
+    const {port} = peer.peerString(block, DELEGATES);
 
     // Send event so delegates know where to get block
     tp.send(events.VERIFY_BLOCK, {

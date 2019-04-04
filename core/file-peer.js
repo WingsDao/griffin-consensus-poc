@@ -30,19 +30,24 @@ const http = require('http');
  */
 exports.peer = function createFileServer(fileStream, connections = 1, aliveFor = 5000) {
 
-    let pulls    = 0;
-    const port   = randomPort();
-    const server = http.createServer();
+    const port    = randomPort();
+    const promise = new Promise((resolve, reject) => {
 
-    server.on('request', (req, res) => {
-        res.on('finish', () => (++pulls === connections) && server.close());
-        fileStream.pipe(res);
+        let requests  = 0;
+        const server  = http.createServer();
+        const success = () => server.close() && resolve({requests, aliveFor});
+
+        server.on('error', reject);
+        server.on('request', (req, res) => {
+            res.on('finish', () => (++requests === connections) && success());
+            fileStream.pipe(res);
+        });
+
+        server.listen(port);
+        setTimeout(success, aliveFor);
     });
 
-    server.listen(port);
-    setTimeout(() => server.close(), aliveFor);
-
-    return port;
+    return {port, promise};
 };
 
 
@@ -55,7 +60,6 @@ exports.peer = function createFileServer(fileStream, connections = 1, aliveFor =
  * @return {Promise}                Promise tbat's gonna be resolved on request end
  */
 exports.pull = function pullFromPeer(host, port, stream) {
-
     return new Promise((resolve, reject) => {
         http.get({host, port}, (res) => {
             res.pipe(stream);
@@ -78,19 +82,23 @@ exports.peerString = function createBufferServer(string, connections = 1, aliveF
         string = JSON.stringify(string);
     }
 
-    let pulls    = 0;
-    const port   = randomPort();
-    const server = http.createServer();
+    const port    = randomPort();
+    const promise = new Promise((resolve, reject) => {
 
-    server.on('request', (req, res) => {
-        res.end(string);
-        (++pulls === connections) && server.close();
+        let requests  = 0;
+        const server  = http.createServer();
+        const success = () => server.close() && resolve({requests, aliveFor});
+
+        server.on('error', reject);
+        server.on('request', (req, res) => {
+            res.end(string) && (++requests === connections) && success();
+        });
+
+        server.listen(port);
+        setTimeout(success, aliveFor);
     });
 
-    server.listen(port);
-    setTimeout(() => server.close(), aliveFor);
-
-    return port;
+    return {port, promise};
 };
 
 /**

@@ -78,7 +78,7 @@ async function streamBlock(block) {
 
     console.log('streaming new block %d to %d nodes', block.number, nodesCount);
 
-    const port = peer.peerString(block, nodesCount);
+    const {port} = peer.peerString(block, nodesCount);
     transport.send(events.NEW_BLOCK, {
         port, block: {
             number:     block.number,
