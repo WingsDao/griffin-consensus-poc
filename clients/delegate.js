@@ -55,8 +55,8 @@ function isValidBlockProducer(block, finalRandomNumber) {
 /**
  * Validate block.
  *
- * @param  {Object}  producedBlock Block produced by BP.
- * @return {Promise<Boolean>}               Whether block is valid or not.
+ * @param  {Object} producedBlock Block produced by BP.
+ * @return {Promise<Boolean>}     Whether block is valid or not.
  */
 async function isValidBlock(producedBlock) {
     const parentBlock = await chaindata.getLatest();
@@ -147,10 +147,15 @@ async function firstStage() {
 
 /**
  * Verify block validity.
+ * 
+ * This implies verification of:
+ * - state calculation
+ * - state root
+ * - receipts root
  *
- * @param  {Number}  port
- * @param  {Object}  msg
- * @param  {Object}  meta
+ * @param  {Number}  port UDP port.
+ * @param  {Object}  msg  Message description.
+ * @param  {Object}  meta UDP information.
  * @return {Promise}
  */
 async function blockVerification({port}, msg, meta) {
