@@ -8,10 +8,10 @@
 
 const math       = require('lib/math');
 const events     = require('lib/events');
-const helpers    = require('lib/helpers');
 const Delegate   = require('core/account');
 const tp         = require('core/transport');
 const blockchain = require('core/blockchain');
+const chaindata  = require('core/chaindata');
 const waiter     = require('services/waiter');
 const sync       = require('services/sync');
 const peer       = require('core/file-peer');
@@ -55,14 +55,14 @@ function isValidBlockProducer(block, finalRandomNumber) {
 /**
  * Validate block.
  *
- * @param  {Object}  producedBlock Block produced by BP.
- * @return {Boolean}               Whether block is valid or not.
+ * @param  {Object} producedBlock Block produced by BP.
+ * @return {Promise<Boolean>}     Whether block is valid or not.
  */
-function isValidBlock(producedBlock) {
-    const block = delegate.produceBlock();
+async function isValidBlock(producedBlock) {
+    const parentBlock = await chaindata.getLatest();
+    const block       = delegate.produceBlock(parentBlock, producedBlock.transactions);
 
-    return producedBlock.stateRoot === helpers.merkleRoot(producedBlock.transactions)
-        && producedBlock.stateRoot === block.stateRoot
+    return producedBlock.stateRoot === block.stateRoot
         && producedBlock.receiptsRoot === block.receiptsRoot;
 }
 
@@ -145,14 +145,28 @@ async function firstStage() {
     return waiter.wait(2000).then(firstStage);
 }
 
+/**
+ * Verify block validity.
+ * 
+ * This implies verification of:
+ * - state calculation
+ * - state root
+ * - receipts root
+ *
+ * @param  {Number}  port UDP port.
+ * @param  {Object}  msg  Message description.
+ * @param  {Object}  meta UDP information.
+ * @return {Promise}
+ */
 async function blockVerification({port}, msg, meta) {
-
     const rawData   = await peer.pullString(meta.address, port).catch(console.error);
     const blockData = JSON.parse(rawData);
 
-    if (blockData) {
-        await streamBlock(blockData);
+    if (blockData && await isValidBlock(blockData)) {
+        return streamBlock(blockData);
     }
+
+    // TODO Case when block is invalid.
 }
 
 async function streamBlock(block) {
