@@ -102,7 +102,10 @@ const DELEGATES  = '*';
     console.log('ALL %d DELEGATES ARE PRESENT', process.env.DELEGATES);
 });
 
-tp.on(events.START_ROUND, async function firstStage() {
+tp.on(events.START_ROUND,  firstStage);
+tp.on(events.VERIFY_BLOCK, blockVerification);
+
+async function firstStage() {
 
     console.log('FIRST STAGE');
 
@@ -140,25 +143,17 @@ tp.on(events.START_ROUND, async function firstStage() {
     console.log('ROUND UNSUCCESSFUL: ', mostCommon.count, parseInt(numDelegates / 2));
 
     return waiter.wait(2000).then(firstStage);
-});
+}
 
-tp.on(events.VERIFY_BLOCK, async function blockVerification({port, block}, msg, meta) {
-
-    console.log('REQUIRES VERIFICATION', block, port, msg, meta);
+async function blockVerification({port}, msg, meta) {
 
     const rawData   = await peer.pullString(meta.address, port).catch(console.error);
+    const blockData = JSON.parse(rawData);
 
-    console.log(rawData);
-
-    const blockData = await Promise.resolve(rawData).then(JSON.parse).catch(console.error);
-
-    // TODO: VERIFY BLOCK
     if (blockData) {
         await streamBlock(blockData);
     }
-
-    console.log('BLOCK STREAMED AND SHARED OVER NETWORK');
-});
+}
 
 async function streamBlock(block) {
     const nodesCount = tp.knownNodes.size - 1;
@@ -169,7 +164,7 @@ async function streamBlock(block) {
 
     console.log('streaming new block %d to %d nodes', block.number, nodesCount);
 
-    const port = peer.peerString(block, nodesCount);
+    const {port, promise} = peer.peerString(block, nodesCount);
     tp.send(events.NEW_BLOCK, {
         port, block: {
             number:     block.number,
@@ -178,4 +173,6 @@ async function streamBlock(block) {
             random:     block.randomNumber
         }
     });
+
+    return promise;
 }
