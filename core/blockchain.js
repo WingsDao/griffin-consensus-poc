@@ -30,9 +30,11 @@ exports.initiateGenesisState = function initiateGenesisState(genesisBlock, block
 
         const account = helpers.emptyAccount(address);
 
-        account.balance      = allocatedAccount.balance      || 0;
-        account.votes        = allocatedAccount.votes        || [];
-        account.certificates = allocatedAccount.certificates || [];
+        Object.assign(account, {
+            balance:      allocatedAccount.balance      || 0,
+            votes:        allocatedAccount.votes        || [],
+            certificates: allocatedAccount.certificates || []
+        });
 
         block.state.push(account);
     }
