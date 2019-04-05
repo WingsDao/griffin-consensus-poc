@@ -113,12 +113,31 @@ async function firstStage() {
 
     // Let's use this variable as if it existed
     const numDelegates   = tp.knownDelegates || 33;
-    const myRandomNum    = math.random();
+    const myRandomNum    = math.random().toString(10);
 
-    tp.send(events.RND_EVENT, myRandomNum, DELEGATES);
+    // sign message
+    const messageWithRandom = {
+        random:    myRandomNum,
+        publicKey: delegate.publicKey.toString('hex'),
+        signature:  delegate.signMessage(myRandomNum).toString('hex')
+    };
 
-    const responses      = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
-    const randomNumbers  = responses.map((r) => r.data);
+    tp.send(events.RND_EVENT, messageWithRandom, DELEGATES);
+
+    const responses        = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
+    const responseMessages = responses.map((r) => r.data);
+
+    let randomNumbers = [];
+
+    // verify signatures of response messages
+    for (const resMes of responseMessages) {
+        const isValidSignature = Delegate.verifyMessage(resMes.random, Buffer.from(resMes.publicKey, 'hex'), Buffer.from(resMes.signature, 'hex'));
+
+        if (isValidSignature) {
+            randomNumbers.push(+resMes.random);
+        }
+    }
+
     const finalRandomNum = math.finalRandom(randomNumbers);
 
     console.log('RANDOMS: ', responses.map((r) => r.data));
@@ -147,7 +166,7 @@ async function firstStage() {
 
 /**
  * Verify block validity.
- * 
+ *
  * This implies verification of:
  * - state calculation
  * - state root
