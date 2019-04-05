@@ -6,6 +6,7 @@
 
 'use strict';
 
+const keccak256  = require('keccak256');
 const math       = require('lib/math');
 const events     = require('lib/events');
 const Delegate   = require('core/account');
@@ -117,11 +118,11 @@ async function exchangeRandoms() {
     const responses        = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
     const responseMessages = responses.map((r) => r.data);
     const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
-    const randomNumbers    = verifiedMessages.map(el => +el.random);
+    const randomNumbers    = verifiedMessages.map(msg => +msg.random);
 
     const finalRandomNum = math.finalRandom(randomNumbers);
 
-    console.log('RANDOMS: ', responses.map((r) => r.data));
+    console.log('RANDOMS: ', randomNumbers);
     console.log('MY FINAL RANDOM IS: ', finalRandomNum);
 
     tp.send(events.FRND_EVENT, finalRandomNum, DELEGATES);
@@ -190,7 +191,28 @@ async function streamBlock(block) {
     }
 
     const {port, promise} = peer.peerString(block, nodesCount);
-    const signature       = delegate.signMessage(JSON.stringify(block)).toString('hex');
+
+    const hashedBlock = keccak256(JSON.stringify(block)).toString('hex');
+    const signature   = delegate.signMessage(hashedBlock).toString('hex');
+
+    tp.send(events.BLOCK_EVENT, {
+        port,
+        hashedBlock,
+        publicKey: delegate.publicKey.toString('hex'),
+        signature
+    }, DELEGATES);
+
+    const numDelegates     = tp.knownDelegates || 33;
+    const responses        = await waiter.waitForAll(events.BLOCK_EVENT, numDelegates, Infinity);
+    const responseMessages = responses.map((r) => r.data);
+    const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.hashedBlock, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+    const verifiedBlocks   = verifiedMessages.map(msg => msg.hashedBlock);
+
+    console.log('Verified blocks:', verifiedBlocks);
+
+    if (verifiedBlocks.length < numDelegates) {
+        // TODO Case when not enough delegates verified block.
+    }
 
     tp.send(events.NEW_BLOCK, {
         port,
