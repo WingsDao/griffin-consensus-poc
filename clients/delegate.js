@@ -113,12 +113,22 @@ async function firstStage() {
 
     // Let's use this variable as if it existed
     const numDelegates   = tp.knownDelegates || 33;
-    const myRandomNum    = math.random();
+    const myRandomNum    = math.random().toString(10);
 
-    tp.send(events.RND_EVENT, myRandomNum, DELEGATES);
+    // sign message
+    const messageWithRandom = {
+        random:    myRandomNum,
+        publicKey: delegate.publicKey.toString('hex'),
+        signature: delegate.signMessage(myRandomNum).toString('hex')
+    };
 
-    const responses      = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
-    const randomNumbers  = responses.map((r) => r.data);
+    tp.send(events.RND_EVENT, messageWithRandom, DELEGATES);
+
+    const responses        = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
+    const responseMessages = responses.map((r) => r.data);
+    const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+    const randomNumbers    = verifiedMessages.map(el => +el.random);
+
     const finalRandomNum = math.finalRandom(randomNumbers);
 
     console.log('RANDOMS: ', responses.map((r) => r.data));
@@ -147,7 +157,7 @@ async function firstStage() {
 
 /**
  * Verify block validity.
- * 
+ *
  * This implies verification of:
  * - state calculation
  * - state root
@@ -179,13 +189,19 @@ async function streamBlock(block) {
     console.log('streaming new block %d to %d nodes', block.number, nodesCount);
 
     const {port, promise} = peer.peerString(block, nodesCount);
+
+    const signature = delegate.signMessage(JSON.stringify(block)).toString('hex');
+
     tp.send(events.NEW_BLOCK, {
-        port, block: {
+        port,
+        block: {
             number:     block.number,
             hash:       block.hash,
             parentHash: block.parentHash,
             random:     block.randomNumber
-        }
+        },
+        publicKey: delegate.publicKey.toString('hex'),
+        signature
     });
 
     return promise;
