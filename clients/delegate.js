@@ -126,7 +126,7 @@ async function firstStage() {
 
     const responses        = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
     const responseMessages = responses.map((r) => r.data);
-    const verifiedMessages = responseMessages.filter(resMes => Delegate.verifyMessage(resMes.random, Buffer.from(resMes.publicKey, 'hex'), Buffer.from(resMes.signature, 'hex')));
+    const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
     const randomNumbers    = verifiedMessages.map(el => +el.random);
 
     const finalRandomNum = math.finalRandom(randomNumbers);
