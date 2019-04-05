@@ -189,13 +189,19 @@ async function streamBlock(block) {
     console.log('streaming new block %d to %d nodes', block.number, nodesCount);
 
     const {port, promise} = peer.peerString(block, nodesCount);
+
+    const signature = delegate.signMessage(JSON.stringify(block)).toString('hex');
+
     tp.send(events.NEW_BLOCK, {
-        port, block: {
+        port,
+        block: {
             number:     block.number,
             hash:       block.hash,
             parentHash: block.parentHash,
             random:     block.randomNumber
-        }
+        },
+        publicKey: delegate.publicKey.toString('hex'),
+        signature
     });
 
     return promise;
