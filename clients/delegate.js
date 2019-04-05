@@ -119,24 +119,15 @@ async function firstStage() {
     const messageWithRandom = {
         random:    myRandomNum,
         publicKey: delegate.publicKey.toString('hex'),
-        signature:  delegate.signMessage(myRandomNum).toString('hex')
+        signature: delegate.signMessage(myRandomNum).toString('hex')
     };
 
     tp.send(events.RND_EVENT, messageWithRandom, DELEGATES);
 
     const responses        = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
     const responseMessages = responses.map((r) => r.data);
-
-    let randomNumbers = [];
-
-    // verify signatures of response messages
-    for (const resMes of responseMessages) {
-        const isValidSignature = Delegate.verifyMessage(resMes.random, Buffer.from(resMes.publicKey, 'hex'), Buffer.from(resMes.signature, 'hex'));
-
-        if (isValidSignature) {
-            randomNumbers.push(+resMes.random);
-        }
-    }
+    const verifiedMessages = responseMessages.filter(resMes => Delegate.verifyMessage(resMes.random, Buffer.from(resMes.publicKey, 'hex'), Buffer.from(resMes.signature, 'hex')));
+    const randomNumbers    = verifiedMessages.map(el => +el.random);
 
     const finalRandomNum = math.finalRandom(randomNumbers);
 
