@@ -8,26 +8,15 @@
 
 const events        = require('lib/events');
 const pool          = require('core/pool');
-const BlockProducer = require('core/account');
 const tp            = require('core/transport');
 const chaindata     = require('core/chaindata');
 const sync          = require('services/sync');
 const waiter        = require('services/waiter');
 const peer          = require('core/file-peer');
+const blockProducer = require('services/wallet');
 
 
 // QUESTION how are first blocks after genesis produced?
-
-/**
- * Secret key of this exact node. Passed via env as SECRET_KEY.
- *
- * ENV: SECRET_KEY
- * @default ''
- * @type {String}
- */
-const secretKey = process.env.SECRET_KEY || '';
-
-const blockProducer = BlockProducer(secretKey);
 
 /**
  * Number of Delegates in network to wait for

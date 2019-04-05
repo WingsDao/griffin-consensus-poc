@@ -10,11 +10,11 @@ const math       = require('lib/math');
 const events     = require('lib/events');
 const Delegate   = require('core/account');
 const tp         = require('core/transport');
-const blockchain = require('core/blockchain');
 const chaindata  = require('core/chaindata');
 const waiter     = require('services/waiter');
 const sync       = require('services/sync');
 const peer       = require('core/file-peer');
+const delegate   = require('services/wallet');
 
 // QUESTION store validator signatures in new block?
 
@@ -34,51 +34,24 @@ const peer       = require('core/file-peer');
 //
 // TODO sign message with validators private key.
 
-const secretKey = process.env.SECRET_KEY && Buffer.from(process.env.SECRET_KEY, 'hex') || null;
-const delegate  = Delegate(secretKey);
-
-
-
 /**
- * Validate block producer.
+ * Delegates multicast channel. Currently it's all.
  *
- * NOTE this can be done much more gracefully.
- *
- * @param  {Object}  block             Block produced by BP.
- * @param  {Number}  finalRandomNumber Final random number of current round.
- * @return {Boolean}                   Whether block producer is a valid next BP or not.
+ * @todo separate delegates communication channel.
+ * @type {String}
  */
-function isValidBlockProducer(block, finalRandomNumber) {
-    return (block.producer === blockchain.getBlockProducer(block, finalRandomNumber));
-}
-
-/**
- * Validate block.
- *
- * @param  {Object} producedBlock Block produced by BP.
- * @return {Promise<Boolean>}     Whether block is valid or not.
- */
-async function isValidBlock(producedBlock) {
-    const parentBlock = await chaindata.getLatest();
-    const block       = delegate.produceBlock(parentBlock, producedBlock.transactions);
-
-    return producedBlock.stateRoot === block.stateRoot
-        && producedBlock.receiptsRoot === block.receiptsRoot;
-}
-
 const DELEGATES  = '*';
 
-// Starts on 'PRODUCE NEW BLOCK EVENT' for example
-// Done by delegate.
-
+/**
+ * Initialize pool and chain on first client start.
+ * @todo We may want to move this logic elsewhere as it's the same in bp, index and here.
+ */
 (async function init() {
 
     // Sync with other nodes if there are
     if (tp.knownNodes.size > 1) {
         await Promise.all([sync.pool(), sync.chain()]);
     }
-
-    console.log('Data synced');
 
 })().then(async function waitForDelegates() {
 
@@ -99,17 +72,34 @@ const DELEGATES  = '*';
         await waiter.wait(500);
     }
 
-    console.log('ALL %d DELEGATES ARE PRESENT', process.env.DELEGATES);
+}).then(async function startClient() {
+
+    require('services/observer');
+
+    tp.on(events.START_ROUND,  exchangeRandoms);
+    tp.on(events.VERIFY_BLOCK, blockVerification);
 });
 
-tp.on(events.START_ROUND,  firstStage);
-tp.on(events.VERIFY_BLOCK, blockVerification);
-
-async function firstStage() {
-
-    console.log('FIRST STAGE');
-
-    console.log(tp.knownDelegates);
+/**
+ * Do generate final random number and broadcast it to network using following steps:
+ *
+ * - send random number to DELEGATES group
+ * - wait for 32 random numbers from other delegates
+ * - calculate final random number using all 33 randoms
+ * - send final random to DELEGATES group
+ * - wait for 32 final randoms from other delegates
+ * - broadcast final random value to network when at least 17 delegates agree on final random
+ * - when consensus has not been reached - repeat these steps again after timeout
+ *
+ * @listens events.START_ROUND
+ *
+ * @emits events.RND_EVENT
+ * @emits events.FRND_EVENT
+ * @emits events.BP_CATCH_IT
+ *
+ * @return {Promise}
+ */
+async function exchangeRandoms() {
 
     // Let's use this variable as if it existed
     const numDelegates   = tp.knownDelegates || 33;
@@ -146,13 +136,12 @@ async function firstStage() {
     console.log('MOST COMMON IS: ', mostCommon);
 
     if (mostCommon.count > (numDelegates / 2)) {
-        console.log('ROUND SUCCESSFUL!');
         return tp.send(events.BP_CATCH_IT, mostCommon.value, '*');
     }
 
     console.log('ROUND UNSUCCESSFUL: ', mostCommon.count, parseInt(numDelegates / 2));
 
-    return waiter.wait(2000).then(firstStage);
+    return waiter.wait(2000).then(exchangeRandoms);
 }
 
 /**
@@ -163,34 +152,45 @@ async function firstStage() {
  * - state root
  * - receipts root
  *
+ * @listens events.VERIFY_BLOCK
+ *
  * @param  {Number}  port UDP port.
  * @param  {Object}  msg  Message description.
  * @param  {Object}  meta UDP information.
  * @return {Promise}
  */
 async function blockVerification({port}, msg, meta) {
-    const rawData   = await peer.pullString(meta.address, port).catch(console.error);
-    const blockData = JSON.parse(rawData);
+    const rawData = await peer.pullString(meta.address, port).catch(console.error);
+    const block   = JSON.parse(rawData);
 
-    if (blockData && await isValidBlock(blockData)) {
-        return streamBlock(blockData);
+    if (block && await isValidBlock(block) && isValidBlockProducer(block)) {
+        return streamBlock(block);
     }
 
     // TODO Case when block is invalid.
+    return null;
 }
 
+/**
+ * Stream verified block over network using HTTP-peering.
+ *
+ * @todo create Block type definition somewhere
+ *
+ * @emits events.NEW_BLOCK
+ *
+ * @param  {Block}   block Block to stream over network.
+ * @return {Promise}       Promise that ends with peering result or null when 0 nodes were online.
+ */
 async function streamBlock(block) {
     const nodesCount = tp.knownNodes.size - 1;
 
+    // If there's no one to share - why bother?
     if (nodesCount === 0) {
         return null;
     }
 
-    console.log('streaming new block %d to %d nodes', block.number, nodesCount);
-
     const {port, promise} = peer.peerString(block, nodesCount);
-
-    const signature = delegate.signMessage(JSON.stringify(block)).toString('hex');
+    const signature       = delegate.signMessage(JSON.stringify(block)).toString('hex');
 
     tp.send(events.NEW_BLOCK, {
         port,
@@ -205,4 +205,39 @@ async function streamBlock(block) {
     });
 
     return promise;
+}
+
+
+/**
+ * Validate block producer.
+ *
+ * NOTE this can be done much more gracefully.
+ *
+ * @todo implement this function
+ *
+ * @param  {Object}  block             Block produced by BP.
+ * @param  {Number}  finalRandomNumber Final random number of current round.
+ * @return {Boolean}                   Whether block producer is a valid next BP or not.
+ */
+function isValidBlockProducer(block, finalRandomNumber) {
+    // return (block.producer === blockchain.getBlockProducer(block, finalRandomNumber));
+
+    finalRandomNumber;
+    block;
+
+    return true;
+}
+
+/**
+ * Validate block.
+ *
+ * @param  {Object}           producedBlock Block produced by BP.
+ * @return {Promise<Boolean>}               Whether block is valid or not.
+ */
+async function isValidBlock(producedBlock) {
+    const parentBlock = await chaindata.getLatest();
+    const block       = delegate.produceBlock(parentBlock, producedBlock.transactions);
+
+    return producedBlock.stateRoot === block.stateRoot
+        && producedBlock.receiptsRoot === block.receiptsRoot;
 }
