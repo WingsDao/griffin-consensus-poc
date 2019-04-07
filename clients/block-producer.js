@@ -7,12 +7,13 @@
 'use strict';
 
 const events        = require('lib/events');
+const math          = require('lib/math');
 const pool          = require('core/pool');
 const tp            = require('core/transport');
 const chaindata     = require('core/chaindata');
+const peer          = require('core/file-peer');
 const sync          = require('services/sync');
 const waiter        = require('services/waiter');
-const peer          = require('core/file-peer');
 const blockProducer = require('services/wallet');
 
 /**
@@ -20,6 +21,13 @@ const blockProducer = require('services/wallet');
  * @type {Number}
  */
 const DELEGATES = +process.env.DELEGATES || 33;
+
+/**
+ * Total number of certificates in the network.
+ *
+ * @type {Number}
+ */
+const TOTAL_CERTIFICATES = math.MAX_RANDOM;
 
 (async function init() {
 
@@ -86,36 +94,64 @@ async function waitAndProduce() {
 /**
  * Get current state.
  *
- * @TODO: implement this function according to PoC or LP.
+ * QUESTION Which scenario to choose?
  *
- * @param  {Number} certificateNumber Selected certificate number.
- * @return {Boolean}                  Whether current account was chosen as a BP or not.
+ * Scenario 1.
+ * We take FRN and take its percent from the total number of certificates
+ * and select one certificate at the same percentage from an array of certificates
+ * of online BPs.
+ *
+ * Cons:
+ * If list of BP changes dynamically this algorithm cannot be considered stable.
+ *
+ * Scenario 2.
+ * FRN is being generated in the range of certificates from the
+ * previous block. FRN generation occurs until selected
+ * certificate corresponds to one of online BPs.
+ *
+ * Cons:
+ * Many iterations. This works good when network is active or iterations
+ * happen frequently.
+ *
+ * @param  {Number}           frn Final Random Number.
+ * @return {Promise<Boolean>}     Whether current account was chosen as a BP or not.
  */
-function isMyRound(certificateNumber) {
+async function isMyRound(frn) {
+    // FIXME Get real FRN number.
+    frn = 1;
 
-    // QUESTION Which scenario to choose?
-    //
-    // Scenario 1.
-    // We take FRN and take its percent from the total number of certificates
-    // and select one certificate at the same percentage from an array of certificates
-    // of online BPs.
-    //
-    // Cons:
-    // If list of BP changes dynamically this algorithm cannot be considered stable.
-    //
-    // Scenario 2.
-    // FRN is being generated in the range of certificates from the
-    // previous block. FRN generation occurs until selected
-    // certificate corresponds to one of online BPs.
-    //
-    // Cons:
-    // Many iterations. This works good when network is active or iterations
-    // happen frequently.
+    // FIXME Get all active block producers.
+    const activeProducers = [blockProducer.address.toString('hex')];
 
-    certificateNumber; // to not cause linter error while keeping function signature
+    console.log('Active producers:', activeProducers);
 
-    // const block = await chaindata.getLatest();
-    // return this.address === blockchain.getBlockProducer(block, certificateNumber);
+    let orderedCertificates = [];
 
-    return true;
+    const block = await chaindata.getLatest();
+
+    // FIXME First round scenario.
+    if (block.number === 0) { return true; }
+
+    // get all certificates from latest block
+    block.state.forEach(account => {
+        if (activeProducers.includes(account.address)) {
+            orderedCertificates.push(...account.certificates);
+        }
+    });
+
+    // get percentage from all certificates.
+    const percentage = frn / TOTAL_CERTIFICATES;
+
+    // select certificate with the same percentage owned by active producer.
+    const certificateIndex = Math.floor(percentage * orderedCertificates.length);
+
+    console.log('Index:', certificateIndex);
+
+    const chosenCertificate = orderedCertificates[certificateIndex];
+    const chosenProducer    = block.state.find(el => el.certificates.includes(chosenCertificate));
+
+    console.log('Chosen certificate:', chosenCertificate);
+    console.log('Chosen producer:', chosenProducer);
+
+    return chosenProducer.address === blockProducer.address;
 }

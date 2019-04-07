@@ -31,20 +31,25 @@ const GENESIS_PATH = `data/${rb(4)}.json`;
 const env = Object.assign({DELEGATES: num, GENESIS_PATH}, process.env);
 
 let delegates = [];
+let producers = [];
 
 const genesis = Genesis();
+
+const account = Account();
+producers.push(account);
+genesis.addProducer(account.address.toString('hex'), 1);
 
 for (let i = 0; i < num; i++) {
     const account = Account();
 
     delegates.push(account);
-    genesis.addDelegate(account.address, DELEGATE_BALANCE);
+    genesis.addDelegate(account.address.toString('hex'), DELEGATE_BALANCE);
 }
 
 genesis.writeToFile(GENESIS_PATH);
 
 const kids     = delegates.map((e, i) => spawnKid(e, i));
-const producer = cp.fork('clients/block-producer.js', ['bp'], {env});
+const producer = cp.fork('clients/block-producer.js', ['bp'], {env: Object.assign(env, {SECRET_KEY: producers[0].secretKey.toString('hex')})});
 const repl     = require('repl').start('> ');
 
 repl.context.kids  = kids;
