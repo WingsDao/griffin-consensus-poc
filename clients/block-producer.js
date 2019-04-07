@@ -15,9 +15,6 @@ const waiter        = require('services/waiter');
 const peer          = require('core/file-peer');
 const blockProducer = require('services/wallet');
 
-
-// QUESTION how are first blocks after genesis produced?
-
 /**
  * Number of Delegates in network to wait for
  * @type {Number}
@@ -39,7 +36,6 @@ const DELEGATES = +process.env.DELEGATES || 33;
     // Attach block producer event listener
     tp.on(events.START_ROUND, waitAndProduce);
 });
-
 
 /**
  * This function is a generic listener for START_ROUND event from
