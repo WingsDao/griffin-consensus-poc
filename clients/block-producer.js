@@ -94,10 +94,10 @@ async function waitAndProduce() {
 function isMyRound(certificateNumber) {
 
     // QUESTION Which scenario to choose?
-    // 
+    //
     // Scenario 1.
     // We take FRN and take its percent from the total number of certificates
-    // and select one certificate at the same percentile from an array of certificates
+    // and select one certificate at the same percentage from an array of certificates
     // of online BPs.
     //
     // Cons:
