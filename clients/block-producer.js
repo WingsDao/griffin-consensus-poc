@@ -93,6 +93,25 @@ async function waitAndProduce() {
  */
 function isMyRound(certificateNumber) {
 
+    // QUESTION Which scenario to choose?
+    // 
+    // Scenario 1.
+    // We take FRN and take its percent from the total number of certificates
+    // and select one certificate at the same percentile from an array of certificates
+    // of online BPs.
+    //
+    // Cons:
+    // If list of BP changes dynamically this algorithm cannot be considered stable.
+    //
+    // Scenario 2.
+    // FRN is being generated in the range of certificates from the
+    // previous block. FRN generation occurs until selected
+    // certificate corresponds to one of online BPs.
+    //
+    // Cons:
+    // Many iterations. This works good when network is active or iterations
+    // happen frequently.
+
     certificateNumber; // to not cause linter error while keeping function signature
 
     // const block = await chaindata.getLatest();
