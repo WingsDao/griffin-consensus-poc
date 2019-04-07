@@ -7,11 +7,11 @@
 'use strict';
 
 const events        = require('lib/events');
-const math          = require('lib/math');
 const pool          = require('core/pool');
 const tp            = require('core/transport');
 const chaindata     = require('core/chaindata');
 const peer          = require('core/file-peer');
+// const blockchain    = require('core/blockchain');
 const sync          = require('services/sync');
 const waiter        = require('services/waiter');
 const blockProducer = require('services/wallet');
@@ -25,9 +25,11 @@ const DELEGATES = +process.env.DELEGATES || 33;
 /**
  * Total number of certificates in the network.
  *
+ * FIXME
+ *
  * @type {Number}
  */
-const TOTAL_CERTIFICATES = math.MAX_RANDOM;
+const TOTAL_CERTIFICATES = 100000;
 
 (async function init() {
 
@@ -56,18 +58,19 @@ const TOTAL_CERTIFICATES = math.MAX_RANDOM;
  */
 async function waitAndProduce() {
 
+    // This event can take forever.
+    // TODO: think of time limitation for this part.
+    const randoms = await waiter.waitForAll(events.BP_CATCH_IT, DELEGATES, Infinity);
+
     // On each round every block producer checks whether he should produce this block.
     // We may want every bp to produce block every round.
     // TODO: remember about backup block producer, as he have to produce as well in order to get block reward.
-    const isProducer = await isMyRound();
+    // FIXME Supply real FRN.
+    const isProducer = await isMyRound(randoms[0].data);
 
     if (!isProducer) {
         return;
     }
-
-    // This event can take forever.
-    // TODO: think of time limitation for this part.
-    const randoms = await waiter.waitForAll(events.BP_CATCH_IT, DELEGATES, Infinity);
 
     // Drain a pool and create new block
     const parentBlock  = await chaindata.getLatest();
@@ -117,20 +120,19 @@ async function waitAndProduce() {
  * @return {Promise<Boolean>}     Whether current account was chosen as a BP or not.
  */
 async function isMyRound(frn) {
-    // FIXME Get real FRN number.
-    frn = 1;
-
-    // FIXME Get all active block producers.
+    // TODO Get real array of active block producers.
     const activeProducers = [blockProducer.address.toString('hex')];
-
-    console.log('Active producers:', activeProducers);
 
     let orderedCertificates = [];
 
-    const block = await chaindata.getLatest();
+    let block = await chaindata.getLatest();
 
-    // FIXME First round scenario.
-    if (block.number === 0) { return true; }
+    if (block.number === 0) {
+        // TODO First round scenario.
+        // Next line causes EventEmitter memory leak.
+        // Object.assign(block, blockchain.initiateGenesisState(block, {state: []}));
+        return true;
+    }
 
     // get all certificates from latest block
     block.state.forEach(account => {
@@ -139,19 +141,13 @@ async function isMyRound(frn) {
         }
     });
 
-    // get percentage from all certificates.
+    // get FRN percentage from all certificates.
     const percentage = frn / TOTAL_CERTIFICATES;
 
     // select certificate with the same percentage owned by active producer.
-    const certificateIndex = Math.floor(percentage * orderedCertificates.length);
-
-    console.log('Index:', certificateIndex);
-
+    const certificateIndex  = Math.floor(percentage * orderedCertificates.length);
     const chosenCertificate = orderedCertificates[certificateIndex];
     const chosenProducer    = block.state.find(el => el.certificates.includes(chosenCertificate));
-
-    console.log('Chosen certificate:', chosenCertificate);
-    console.log('Chosen producer:', chosenProducer);
 
     return chosenProducer.address === blockProducer.address;
 }
