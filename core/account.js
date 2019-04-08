@@ -88,6 +88,15 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
 };
 
 /**
+ * Get address of account as hex string.
+ *
+ * @returns {string} Address as hex string.
+ */
+Account.prototype.getStrAddress = function getStrAddress() {
+    return '0x' + this.address.toString('hex');
+};
+
+/**
  * Vote for delegate.
  *
  * @param  {String} address Address of delegate.
@@ -126,7 +135,7 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.number     = parentBlock.number + 1;
     block.parentHash = parentBlock.hash;
     block.hash       = '0x' + keccak256(parentBlock.hash).toString('hex');
-    block.producer   = '0x' + this.address.toString('hex');
+    block.producer   = this.getStrAddress();
     block.state      = parentBlock.state    || [];
     block.receipts   = parentBlock.receipts || [];
     block.txRoot     = merkleRoot(transactions);

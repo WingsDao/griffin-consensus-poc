@@ -55,7 +55,7 @@ describe('Accounts', () => {
     });
 
     it('standard tx', () => {
-        const serializedTx = account.tx('0x' + target.address.toString('hex'), '0xff');
+        const serializedTx = account.tx(target.getStrAddress(), '0xff');
 
         console.log('Standard serialized tx:', serializedTx);
 
@@ -65,11 +65,11 @@ describe('Accounts', () => {
 
         console.log('tx object', tx);
 
-        tx.from.should.be.equal('0x' + account.address.toString('hex'));
+        tx.from.should.be.equal(account.getStrAddress());
     });
 
     it('vote tx', () => {
-        const serializedTx = account.vote('0x' + target.address.toString('hex'), AMOUNT_TO_STAKE);
+        const serializedTx = account.vote(target.getStrAddress(), AMOUNT_TO_STAKE);
 
         console.log('Vote serialized tx:', serializedTx);
 
