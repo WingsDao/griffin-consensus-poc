@@ -11,7 +11,6 @@ const pool          = require('core/pool');
 const tp            = require('core/transport');
 const chaindata     = require('core/chaindata');
 const peer          = require('core/file-peer');
-// const blockchain    = require('core/blockchain');
 const sync          = require('services/sync');
 const waiter        = require('services/waiter');
 const blockProducer = require('services/wallet');
@@ -25,11 +24,13 @@ const DELEGATES = +process.env.DELEGATES || 33;
 /**
  * Total number of certificates in the network.
  *
- * FIXME
+ * @todo remake this part of app
  *
+ * ENV: TOTAL_CERTIFICATES
+ * @default 100000
  * @type {Number}
  */
-const TOTAL_CERTIFICATES = 100000;
+const TOTAL_CERTIFICATES = process.env.TOTAL_CERTIFICATES || 100000;
 
 (async function init() {
 
@@ -60,6 +61,11 @@ async function waitAndProduce() {
 
     // This event can take forever.
     // TODO: think of time limitation for this part.
+    // In async architecture it's also possible that BP will catch same events from different
+    // delegates (i.e. not enough delegates - repeat, same message from same D caught)
+    //
+    // QUESTION: Should we do a check somewhere for round definition or smth. Number of retries mb?
+    // We want to let BP know whether round has been restarted so he can drop this listener
     const randoms = await waiter.waitForAll(events.BP_CATCH_IT, DELEGATES, Infinity);
 
     // On each round every block producer checks whether he should produce this block.
@@ -69,6 +75,7 @@ async function waitAndProduce() {
     const isProducer = await isMyRound(randoms[0].data);
 
     if (!isProducer) {
+        console.log('I AM NO PRODUCER, ');
         return;
     }
 
@@ -121,11 +128,9 @@ async function waitAndProduce() {
  */
 async function isMyRound(frn) {
     // TODO Get real array of active block producers.
-    const activeProducers = [blockProducer.address.toString('hex')];
-
-    let orderedCertificates = [];
-
-    let block = await chaindata.getLatest();
+    const activeProducers     = [blockProducer.address.toString('hex')];
+    const block               = await chaindata.getLatest();
+    const orderedCertificates = [];
 
     if (block.number === 0) {
         // TODO First round scenario.
@@ -135,7 +140,7 @@ async function isMyRound(frn) {
     }
 
     // get all certificates from latest block
-    block.state.forEach(account => {
+    block.state.forEach((account) => {
         if (activeProducers.includes(account.address)) {
             orderedCertificates.push(...account.certificates);
         }
@@ -149,5 +154,9 @@ async function isMyRound(frn) {
     const chosenCertificate = orderedCertificates[certificateIndex];
     const chosenProducer    = block.state.find(el => el.certificates.includes(chosenCertificate));
 
-    return chosenProducer.address === blockProducer.address;
+    console.log('PERC, FRN, TOTAL', percentage, frn, TOTAL_CERTIFICATES);
+    console.log('CHOSEN', chosenProducer);
+    console.log('MY IS', blockProducer.address.toString('hex'));
+
+    return (chosenProducer.address === blockProducer.address.toString('hex'));
 }

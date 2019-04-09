@@ -26,7 +26,7 @@ const DELEGATE_BALANCE = 100;
  *
  * @type {String}
  */
-const GENESIS_PATH = `data/${rb(4)}.json`;
+const GENESIS_PATH = `data/${rb(4).toString('hex')}.json`;
 
 const env = Object.assign({DELEGATES: num, GENESIS_PATH}, process.env);
 
@@ -72,16 +72,19 @@ process
  * @return {cp.ChildProcess}   Spawned child process
  */
 function spawnKid(e, i) {
+
+    const datadir = 'data/del_' + (i + 1);
     const options = {
-        env: Object.assign(env, {SECRET_KEY: e.secretKey.toString('hex')}),
-        stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        env: Object.assign({
+            SECRET_KEY: e.secretKey.toString('hex'),
+            DATADIR: datadir
+        }, env),
     };
 
-    const outPath = 'data/del_' + (i + 1);
+    fs.mkdirSync(datadir);
 
-    fs.mkdirSync(outPath);
-
-    const stream = fs.createWriteStream(outPath + '/out.log', {flags: 'w'});
+    const stream = fs.createWriteStream(datadir + '/out.log', {flags: 'w'});
     const child  = cp.fork('clients/delegate.js', [], options);
 
     child.stdout.pipe(stream);
