@@ -20,20 +20,17 @@ require('core/transport')
      */
     .on(events.START_ROUND, function startRoundAttachListener() {
         this.once(events.NEW_BLOCK, async function newBlock({port, block}, msg, meta) {
-            if (msg.sender !== this.transportId) {
+            const lastBlock = await chaindata.getLatest();
 
-                const lastBlock = await chaindata.getLatest();
+            console.log('New block received', block);
 
-                console.log('New block received', block);
+            if (lastBlock.number >= block.number) { return; }
 
-                if (lastBlock.number >= block.number) { return; }
+            console.log('New block accepted');
 
-                console.log('New block accepted');
+            const newBlock = await peer.pullString(meta.address, port);
 
-                const newBlock = await peer.pullString(meta.address, port);
-
-                await chaindata.add(newBlock);
-            }
+            await chaindata.add(newBlock);
         });
     })
 

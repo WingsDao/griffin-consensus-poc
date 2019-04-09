@@ -133,6 +133,7 @@ async function exchangeRandoms() {
     console.log('MOST COMMON IS: ', mostCommon);
 
     if (mostCommon.count > (numDelegates / 2)) {
+        console.log('ROUND SUCCESSFUL, SENDING VALUE TO BP: %s', mostCommon.value);
         return tp.send(events.BP_CATCH_IT, mostCommon.value, '*');
     }
 
@@ -156,7 +157,10 @@ async function exchangeRandoms() {
  * @param  {Object}  meta UDP information.
  * @return {Promise}
  */
-async function blockVerification({port}, msg, meta) {
+async function blockVerification({port, block: short}, msg, meta) {
+
+    console.log('VERIFYING BLOCK: %s', JSON.stringify(short));
+
     const rawData = await peer.pullString(meta.address, port).catch(console.error);
     const block   = JSON.parse(rawData);
 
@@ -208,6 +212,7 @@ async function streamBlock(block) {
 
     if (verifiedBlocks.length < numDelegates) {
         // TODO Case when not enough delegates verified block.
+        console.log('VERIFIED < NUMBER OF DELEGATES');
     }
 
     tp.send(events.NEW_BLOCK, {
