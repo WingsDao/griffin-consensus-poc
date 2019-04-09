@@ -92,7 +92,7 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
  *
  * @returns {string} Address as hex string.
  */
-Account.prototype.getStrAddress = function getStrAddress() {
+Account.prototype.getHexAddress = function getHexAddress() {
     return '0x' + this.address.toString('hex');
 };
 
@@ -135,7 +135,7 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.number     = parentBlock.number + 1;
     block.parentHash = parentBlock.hash;
     block.hash       = '0x' + keccak256(parentBlock.hash).toString('hex');
-    block.producer   = this.getStrAddress();
+    block.producer   = this.getHexAddress();
     block.state      = parentBlock.state    || [];
     block.receipts   = parentBlock.receipts || [];
     block.txRoot     = merkleRoot(transactions);

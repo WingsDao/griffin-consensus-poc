@@ -6,7 +6,7 @@
 const chainData = require('core/chaindata');
 
 /**
- * Returns balance of account.
+ * Get balance of account by address.
  *
  * @param   address            Address of account.
  * @returns {Promise.<Number>} Balance of account.
@@ -18,7 +18,7 @@ exports.getBalance = async function getBalance(address) {
 };
 
 /**
- * Returns stake of account.
+ * Get stake of account by address.
  *
  * @param   address            Address of account.
  * @returns {Promise.<Number>} Stake of account.
@@ -34,7 +34,7 @@ exports.getStake = async function getStake(address) {
 };
 
 /**
- * Returns votes for account.
+ * Get votes for account (delegate) by address.
  *
  * @param   address              Address of delegates.
  * @returns {Promise.<String[]>} All votes for delegate.
@@ -52,7 +52,7 @@ exports.getVotesFor = async function getVotesFor(address) {
 /**
  * Get all delegates sorted by their votes.
  *
- * @returns {Promise.<Object[]>} Delegates array.
+ * @returns {Promise.<Object[]>|Object[]} Delegates array.
  */
 exports.getDelegates = async function getDelegates() {
     let delegates = await getRawDelegates();
@@ -126,13 +126,36 @@ exports.getCertificates = async function getCertificates(address) {
     return account.certificates;
 };
 
-/**
- * @todo getBlockProducers function
- * @todo isBlockProducer function
- */
 
 /**
- * Returns delegates as object.
+ * Check if account is a block producer.
+ *
+ * @param  address             Address of account to check.
+ * @returns {Promise.<boolean>}
+ */
+exports.isBlockProducer = async function isBlockProducer(address) {
+    const latestBlock = await chainData.getLatest();
+
+    const account = latestBlock.state.find(account => account.address == address);
+
+    return !!account.certificates.length;
+};
+
+/**
+ * Get all block producers.
+ *
+ * @returns {Promise.<Object[]>} List of accounts who has certificates as block producers.
+ */
+exports.getBlockProducers = async function getBlockProducers() {
+    const latestBlock = await chainData.getLatest();
+
+    const blockProducers = latestBlock.state.filter(account => account.certificates.length);
+
+    return blockProducers;
+};
+
+/**
+ * Get delegates packed into object.
  *
  * @example
  * {
@@ -140,7 +163,7 @@ exports.getCertificates = async function getCertificates(address) {
  *  '0x01...': 2000
  * }
  *
- * @returns {Promise.<Object>} Object contains delegates and their votes.s
+ * @returns {Promise.<Object>} Object contains delegates and their votes.
  */
 async function getRawDelegates() {
     const latestBlock = await chainData.getLatest();
@@ -161,7 +184,7 @@ async function getRawDelegates() {
 };
 
 /**
- * Returns account by address from latetst block.
+ * Get account by address from latest block.
  *
  * @param   address   Address of account to return.
  * @returns {Promise.<Object>} Account.
@@ -173,7 +196,7 @@ async function getAccountFromLatestBlock(address) {
 };
 
 /**
- * Finds account in the block.
+ * Finds account by address in the provided block.
  *
  * @param   address            Address of account to find.
  * @param   block              Block to find account.
@@ -183,7 +206,7 @@ async function getAccount(address, block) {
     const account = block.state.find(account => account.address == address);
 
     if (!account) {
-        throw `Account '${address.toString('hex')}' not found`;
+        throw `Account '0x${address.toString('hex')}' not found`;
     }
 
     return account;
