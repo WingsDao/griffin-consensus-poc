@@ -35,9 +35,9 @@ let producers = [];
 
 const genesis = Genesis();
 
-const account = Account();
-producers.push(account);
-genesis.addProducer(account.address.toString('hex'), 1);
+// const account = Account();
+// producers.push(account);
+// genesis.addProducer(account.address.toString('hex'), 1);
 
 for (let i = 0; i < num; i++) {
     const account = Account();
@@ -46,10 +46,20 @@ for (let i = 0; i < num; i++) {
     genesis.addDelegate(account.address.toString('hex'), DELEGATE_BALANCE);
 }
 
+for (let i = 0; i < num; i++) {
+    const account = Account();
+
+    producers.push(account);
+    genesis.addProducer(account.address.toString('hex'), 1);
+}
+
 genesis.writeToFile(GENESIS_PATH);
 
-const kids     = delegates.map((e, i) => spawnKid(e, i));
-const producer = cp.fork('clients/block-producer.js', ['bp'], {env: Object.assign(env, {SECRET_KEY: producers[0].secretKey.toString('hex')})});
+const kids = []
+    .concat(delegates.map(spawnDelegate))
+    .concat(producers.map(spawnProducer));
+
+// const producer = cp.fork('clients/block-producer.js', ['bp'], {env: Object.assign(env, {SECRET_KEY: producers[0].secretKey.toString('hex')})});
 const repl     = require('repl').start('> ');
 
 repl.context.kids  = kids;
@@ -58,6 +68,15 @@ repl.context.start = () => tp.send(evt.START_ROUND);
 
 tp.delegates = new Map();
 tp.on(evt.I_AM_HERE, (data, msg) => tp.delegates.set(msg.sender, msg));
+
+console.log('DELEGATES:') || delegates.map((e) => console.log('-', e.address.toString('hex')));
+console.log('PRODUCERS:') || producers.map((e) => console.log('-', e.address.toString('hex')));
+
+tp.on(evt.START_ROUND, function () {
+    tp.once(evt.NEW_BLOCK, function ({block}) {
+        console.log('New block', block);
+    });
+});
 
 process
     .on('exit', finish)
@@ -71,7 +90,7 @@ process
  * @param  {Number}          i Sequence number of delegate
  * @return {cp.ChildProcess}   Spawned child process
  */
-function spawnKid(e, i) {
+function spawnDelegate(e, i) {
 
     const datadir = 'data/del_' + (i + 1);
     const options = {
@@ -93,9 +112,32 @@ function spawnKid(e, i) {
     return child;
 }
 
+function spawnProducer(e, i) {
+
+    const datadir = 'data/prod_' + (i + 1);
+    const options = {
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        env: Object.assign({
+            SECRET_KEY: e.secretKey.toString('hex'),
+            DATADIR: datadir
+        }, env),
+    };
+
+    fs.mkdirSync(datadir);
+
+    const stream = fs.createWriteStream(datadir + '/out.log', {flags: 'w'});
+    const child  = cp.fork('clients/block-producer.js', [], options);
+
+    child.stdout.pipe(stream);
+    child.stderr.pipe(stream);
+
+    return child;
+}
+
 function finish(...args) {
     return console.log('Cleaning up:', args)
-        || producer.kill()
+        // || producer.kill()
+        || true
         && kids.map((kid) => kid.kill())
         && process.exit(0);
 }

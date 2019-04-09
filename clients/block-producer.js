@@ -96,7 +96,8 @@ async function waitAndProduce() {
             number:     block.number,
             hash:       block.hash,
             parentHash: block.parentHash,
-            random:     block.randomNumber
+            random:     block.randomNumber,
+            producer:   block.producer
         }
     });
 }

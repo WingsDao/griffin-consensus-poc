@@ -99,8 +99,8 @@ const DELEGATES  = '*';
 async function exchangeRandoms() {
 
     // Let's use this variable as if it existed
-    const numDelegates   = tp.knownDelegates || 33;
-    const myRandomNum    = math.random().toString(10);
+    const numDelegates = tp.knownDelegates || 33;
+    const myRandomNum  = math.random().toString(10);
 
     // sign message
     const messageWithRandom = {
@@ -116,7 +116,7 @@ async function exchangeRandoms() {
     const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
     const randomNumbers    = verifiedMessages.map(msg => +msg.random);
 
-    const finalRandomNum = math.finalRandom(randomNumbers);
+    const finalRandomNum   = math.finalRandom(randomNumbers);
 
     console.log('RANDOMS: ', randomNumbers);
     console.log('MY FINAL RANDOM IS: ', finalRandomNum);
@@ -221,7 +221,8 @@ async function streamBlock(block) {
             number:     block.number,
             hash:       block.hash,
             parentHash: block.parentHash,
-            random:     block.randomNumber
+            random:     block.randomNumber,
+            producer:   block.producer
         },
         publicKey: delegate.publicKey.toString('hex'),
         signature
