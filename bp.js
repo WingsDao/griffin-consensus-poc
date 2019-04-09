@@ -31,7 +31,7 @@ const producer = Account(SECRET_KEY);
 console.log(producer.secretKey.toString('hex'));
 console.log('producer', {address: '0x' + producer.address.toString('hex'), publicKey: '0x' + producer.publicKey.toString('hex')});
 
-require('network/observer');
+require('services/observer');
 
 (async function newBlock() {
 
@@ -43,11 +43,6 @@ require('network/observer');
     const block = producer.produceBlock(parentBlock, transactions);
 
     await chaindata.add(block);
-
-
-
-    console.log('new block', block.number);
-
     await streamBlock(block);
 
     // transport.send(events.NEW_BLOCK, block);
@@ -59,10 +54,17 @@ require('network/observer');
 
 (async function newTx() {
 
-    const target       = Account();
-    const serializedTx = producer.tx('0x' + target.address.toString('hex'), '0xff');
+    const target = () => new Account().address;
+    const acc    = producer;
 
-    await transport.send(events.NEW_TRANSACTION, serializedTx);
+    [
+        acc.tx('0x' + target().toString('hex'), '0xff'),
+        acc.stake(100),
+        acc.stake(200),
+        acc.vote('0x' + target().toString('hex'), 100),
+        acc.vote('0x' + target().toString('hex'), 200),
+        acc.vote('0x' + target().toString('hex'), 300)
+    ].forEach((tx) => transport.send(events.NEW_TRANSACTION, tx));
 
     return wait(TIMEOUT / 2).then(newTx);
 })();
@@ -76,7 +78,7 @@ async function streamBlock(block) {
 
     console.log('streaming new block %d to %d nodes', block.number, nodesCount);
 
-    const port = peer.peerString(block, nodesCount);
+    const {port} = peer.peerString(block, nodesCount);
     transport.send(events.NEW_BLOCK, {
         port, block: {
             number:     block.number,

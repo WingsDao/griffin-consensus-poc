@@ -22,9 +22,18 @@ describe('Accounts', () => {
     let account = {};
     let target  = {};
     let block   = {};
+    let signature = null;
 
-    const AMOUNT_TO_STAKE = 200;
-    const AMOUNT_TO_VOTE  = 100;
+    /**
+     * Initial account balance.
+     * @see genesis.json
+     *
+     * @type {Number}
+     */
+    const INITIAL_AMOUNT = 100000000;
+    const AMOUNT_TO_SEND = 100;
+    const AMOUNT_TO_VOTE = 100;
+    const MESSAGE = 'hello, this is some message';
 
     let transactions = [];
 
@@ -55,23 +64,19 @@ describe('Accounts', () => {
     });
 
     it('standard tx', () => {
-        const serializedTx = account.tx(target.getHexAddress(), '0xff');
-
-        console.log('Standard serialized tx:', serializedTx);
+        const toAddress    = target.getHexAddress();
+        const serializedTx = account.tx(toAddress, AMOUNT_TO_SEND);
 
         transactions.push(serializedTx);
 
         const tx = helpers.toTxObject(serializedTx);
 
-        console.log('tx object', tx);
-
         tx.from.should.be.equal(account.getHexAddress());
+        tx.to.should.be.equal(toAddress);
     });
 
     it('vote tx', () => {
-        const serializedTx = account.vote(target.getHexAddress(), AMOUNT_TO_STAKE);
-
-        console.log('Vote serialized tx:', serializedTx);
+        const serializedTx = account.vote(target.getHexAddress());
 
         transactions.push(serializedTx);
     });
@@ -79,15 +84,21 @@ describe('Accounts', () => {
     it('stake tx', () => {
         const serializedTx = account.stake(AMOUNT_TO_VOTE);
 
-        console.log('Stake serialized tx:', serializedTx);
-
         transactions.push(serializedTx);
     });
 
-    it('produce first block and get list of delegates', () => {
+    it('produce first block and verify state', () => {
         block = account.produceBlock(genesis, transactions);
 
-        console.log('New block:', block.state[0]);
+        const accountState = block.state[0];
+
+        console.log('Account state:', accountState);
+
+        const currentAmount = INITIAL_AMOUNT - AMOUNT_TO_SEND - AMOUNT_TO_VOTE;
+
+        accountState.balance.should.be.equal(currentAmount);
+        accountState.votes.includes('0x' + target.address.toString('hex')).should.be.true;
+        accountState.certificates.length.should.be.equal(1);
     });
 
     it('parse block state', () => {
@@ -95,6 +106,28 @@ describe('Accounts', () => {
 
         console.log('Delegates:', normalizedState.delegates);
         console.log('Amount of certificates:', normalizedState.totalCertificates);
+    });
+
+    it('sign message with account secret key', () => {
+        signature = account.signMessage(MESSAGE);
+
+        signature.length.should.be.equal(64);
+        console.log('Signature: ', signature);
+    });
+
+    it('verify signed message', () => {
+        const verified = Account.verifyMessage(MESSAGE, account.publicKey, signature);
+        verified.should.be.true;
+    });
+
+    it('verify signed message with wrong message', () => {
+        const verified = Account.verifyMessage('not that message', account.publicKey, signature);
+        verified.should.be.false;
+    });
+
+    it('verify signed message with wrong public key', () => {
+        const verified = Account.verifyMessage(MESSAGE, target.publicKey, signature);
+        verified.should.be.false;
     });
 
     xit('produce second block', () => {

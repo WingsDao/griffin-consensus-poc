@@ -14,7 +14,7 @@ const peer   = require('core/file-peer');
 const chain  = require('core/chaindata');
 const pool   = require('core/pool');
 
-const waiter = require('network/waiter');
+const waiter = require('services/waiter');
 const wait   = require('util').promisify(setTimeout);
 
 (async function initServices() {
@@ -41,14 +41,7 @@ const wait   = require('util').promisify(setTimeout);
 
     console.log('Starting observer');
 
-    require('network/observer');
-
-    tp.on(events.NEW_BLOCK, function newBlock({block}, msg) {
-        console.log('Received block: %s', JSON.stringify(block));
-        console.log('Message:');
-        console.log(msg);
-    });
-
+    require('services/observer');
 });
 
 
