@@ -69,8 +69,6 @@ require('core/transport')
     .on(events.PING, function areYouLookingForMe(data, msg) {
         const addr = wallet.address.toString('hex');
 
-        console.log(data, addr);
-
         if (data === addr) {
             this.send(events.PONG, addr, msg.sender);
         }
