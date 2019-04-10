@@ -118,8 +118,8 @@ function handleStake(tx, block) {
 
     if (sender.balance < totalPrice) { throw 'Sender doesn\'t have enough coin in his purse.'; }
 
-    sender.balance -= totalPrice;
-    sender.locked  += totalPrice;
+    sender.balance = +sender.balance - totalPrice;
+    sender.locked  = +sender.locked  + totalPrice;
 
     for (let i = 0; i < nCertificates; i++) {
         sender.certificates.push('0x' + randomBytes(32).toString('hex'));
