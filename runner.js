@@ -72,8 +72,8 @@ tp.on(evt.PONG, (data) => console.log('Yup, dude, %s', data));
 tp.delegates = new Map();
 tp.on(evt.I_AM_HERE, (data, msg) => tp.delegates.set(msg.sender, msg));
 
-console.log('DELEGATES:') || delegates.map((e) => console.log('-', e.address.toString('hex')));
-console.log('PRODUCERS:') || producers.map((e) => console.log('-', e.address.toString('hex')));
+console.log('DELEGATES:') || delegates.map((e) => console.log('-', '0x' + e.address.toString('hex')));
+console.log('PRODUCERS:') || producers.map((e) => console.log('-', '0x' + e.address.toString('hex')));
 
 tp.on(evt.START_ROUND, function () {
     tp.once(evt.NEW_BLOCK, function ({block}) {
