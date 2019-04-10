@@ -30,14 +30,13 @@ const GENESIS_PATH = `data/${rb(4).toString('hex')}.json`;
 
 const env = Object.assign({DELEGATES: num, GENESIS_PATH}, process.env);
 
-let delegates = [];
-let producers = [];
+const delegates = [];
+const producers = [];
+const bank      = Account();
 
 const genesis = Genesis();
 
-// const account = Account();
-// producers.push(account);
-// genesis.addProducer(account.address.toString('hex'), 1);
+genesis.addAccount(bank.address.toString('hex'), 1000000);
 
 for (let i = 0; i < num; i++) {
     const account = Account();
@@ -59,8 +58,8 @@ const kids = []
     .concat(delegates.map(spawnDelegate))
     .concat(producers.map(spawnProducer));
 
-// const producer = cp.fork('clients/block-producer.js', ['bp'], {env: Object.assign(env, {SECRET_KEY: producers[0].secretKey.toString('hex')})});
-const repl     = require('repl').start('> ');
+const bankKiddo = cp.fork('clients/bank.js', ['bank'], {env: Object.assign(env, {SECRET_KEY: bank.secretKey.toString('hex')})});
+const repl      = require('repl').start('> ');
 
 repl.context.kids  = kids;
 repl.context.tp    = tp;
@@ -136,7 +135,7 @@ function spawnProducer(e, i) {
 
 function finish(...args) {
     return console.log('Cleaning up:', args)
-        // || producer.kill()
+        || bankKiddo.kill()
         || true
         && kids.map((kid) => kid.kill())
         && process.exit(0);
