@@ -65,6 +65,9 @@ const repl     = require('repl').start('> ');
 repl.context.kids  = kids;
 repl.context.tp    = tp;
 repl.context.start = () => tp.send(evt.START_ROUND);
+repl.context.ping  = (addr) => tp.send(evt.PING, addr);
+
+tp.on(evt.PONG, (data) => console.log('Yup, dude, %s', data));
 
 tp.delegates = new Map();
 tp.on(evt.I_AM_HERE, (data, msg) => tp.delegates.set(msg.sender, msg));
