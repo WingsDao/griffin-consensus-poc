@@ -8,7 +8,7 @@ const pool      = require('core/pool');
 const events    = require('lib/events');
 const peer      = require('core/file-peer');
 const chaindata = require('core/chaindata');
-
+const wallet    = require('services/wallet');
 
 require('core/transport')
 
@@ -16,7 +16,7 @@ require('core/transport')
      * We don't want one to receive 33 new blocks from delegates so for now we stick
      * to this this solution: only one block received for one round
      *
-     * @event events.START_ROUND
+     * @listens events.START_ROUND
      */
     .on(events.START_ROUND, function startRoundAttachListener() {
         this.once(events.NEW_BLOCK, async function newBlock({port, block}, msg, meta) {
@@ -63,6 +63,14 @@ require('core/transport')
         if (msg.sender !== this.transportId) {
             const {port} = peer.peer(chaindata.createReadableStream());
             this.send(events.CHAINDATA_SERVER_CREATED, port, msg.sender);
+        }
+    })
+
+    .on(events.PING, function areYouLookingForMe(data, msg) {
+        const addr = '0x' + wallet.address.toString('hex');
+
+        if (data === addr) {
+            this.send(events.PONG, addr, msg.sender);
         }
     })
 ;
