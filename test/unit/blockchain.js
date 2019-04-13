@@ -41,9 +41,7 @@ describe('Chain', () => {
         serializedTx = account.stake(100);
         transactions.push(serializedTx);
 
-        const block = account.produceBlock(genesis, transactions);
-
-        await chaindata.add(block);
+        account.produceBlock(genesis, transactions);
     });
 
     it('get account balance', async () => {
