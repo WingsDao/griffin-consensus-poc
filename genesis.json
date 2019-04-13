@@ -7,5 +7,6 @@
 
     "alloc": [
         {"0x05afba62afe7a92d4b6954741990a9e2f5b5e2ad": {"balance": 100000000}}
-    ]
+    ],
+    "state": []
 }
