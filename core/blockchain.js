@@ -177,7 +177,6 @@ exports.getCertificates = async function getCertificates(address) {
     return account.certificates;
 };
 
-
 /**
  * Check if account is a block producer.
  *
@@ -202,7 +201,6 @@ exports.getBlockProducers = async function getBlockProducers() {
 
     return blockProducers;
 };
-
 
 /**
  * Handle standard transaction.
@@ -335,7 +333,6 @@ function getBlockProducer(block, finalRandomNumber) {
         }
     }
 }
-
 
 /**
  * Get delegates packed into object.
