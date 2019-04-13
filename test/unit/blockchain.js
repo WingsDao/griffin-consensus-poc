@@ -6,8 +6,10 @@
 
 require('chai').should();
 
-const Account = require('core/account');
-const chain   = require('core/chain');
+const Account   = require('core/account');
+const chaindata     = require('core/chaindata');
+const genesis   = require('genesis');
+const blockchain = require('core/blockchain');
 
 
 /**
@@ -23,13 +25,29 @@ describe('Chain', () => {
     let delegates      = [];
     let blockProducers = [];
 
-    before('create', () => {
-        account = Account(SECRET_KEY);
+    before('create', async () => {
+        let serializedTx = {};
+        const transactions = [];
+
+        account  = Account(SECRET_KEY);
         delegate = Account();
+
+        serializedTx = account.tx(delegate.getHexAddress(), 100);
+        transactions.push(serializedTx);
+
+        serializedTx = account.vote(delegate.getHexAddress());
+        transactions.push(serializedTx);
+
+        serializedTx = account.stake(100);
+        transactions.push(serializedTx);
+
+        const block = account.produceBlock(genesis, transactions);
+
+        await chaindata.add(block);
     });
 
     it('get account balance', async () => {
-        const balance = await chain.getBalance(account.getHexAddress());
+        const balance = await blockchain.getBalance(account.getHexAddress());
 
         balance.should.be.a('number');
 
@@ -37,7 +55,7 @@ describe('Chain', () => {
     });
 
     xit('get account stake', async () => {
-        const stake = await chain.getStake(account.getHexAddress());
+        const stake = await blockchain.getStake(account.getHexAddress());
 
         stake.should.be.a('number');
 
@@ -45,13 +63,13 @@ describe('Chain', () => {
     });
 
     it('get account votes', async () => {
-        const votes = await chain.getVotesFor(delegate.getHexAddress());
+        const votes = await blockchain.getVotesFor(delegate.getHexAddress());
 
         console.log('Votes:', votes);
     });
 
     it('get all delegates', async () => {
-        delegates = await chain.getDelegates();
+        delegates = await blockchain.getDelegates();
 
         delegates.should.be.a('array');
 
@@ -59,19 +77,19 @@ describe('Chain', () => {
     });
 
     it('get active delegates', async () => {
-        const activeDelegates = await chain.getActiveDelegates();
+        const activeDelegates = await blockchain.getActiveDelegates();
 
         console.log('Active delegates:', activeDelegates);
     });
 
     it('get successor delegates', async () => {
-        const successorDelegates = await chain.getSuccessorDelegates();
+        const successorDelegates = await blockchain.getSuccessorDelegates();
 
         console.log('Successor delegates:', successorDelegates);
     });
 
     it('get delegates count', async () => {
-        const count  = await chain.getDelegatesCount();
+        const count  = await blockchain.getDelegatesCount();
 
         count.should.be.a('number');
 
@@ -79,7 +97,7 @@ describe('Chain', () => {
     });
 
     it('check if account is delegate', async () => {
-        const isDelegate = await chain.isDelegate(delegates[0]);
+        const isDelegate = await blockchain.isDelegate(delegates[0]);
 
         isDelegate.should.be.true;
 
@@ -87,13 +105,13 @@ describe('Chain', () => {
     });
 
     it('get block producers', async () => {
-        blockProducers = await chain.getBlockProducers();
+        blockProducers = await blockchain.getBlockProducers();
 
         console.log('block producers:', blockProducers);
     });
 
     it('check if account is block producer', async () => {
-        const isBlockProducer = await chain.isBlockProducer(blockProducers[0].address);
+        const isBlockProducer = await blockchain.isBlockProducer(blockProducers[0].address);
 
         isBlockProducer.should.be.true;
 
