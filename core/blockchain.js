@@ -364,7 +364,7 @@ async function getRawDelegates() {
     }, {});
 
     return rawDelegates;
-};
+}
 
 /**
  * Get account by address from latest block.
@@ -376,7 +376,7 @@ async function getAccountFromLatestBlock(address) {
     const latestBlock = await chainData.getLatest();
 
     return getAccount(address, latestBlock);
-};
+}
 
 /**
  * Finds account by address in the provided block.
@@ -393,4 +393,4 @@ async function getAccount(address, block) {
     }
 
     return account;
-};
+}
