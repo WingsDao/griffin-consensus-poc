@@ -64,19 +64,19 @@ describe('Accounts', () => {
     });
 
     it('standard tx', () => {
-        const toAddress    = '0x' + target.address.toString('hex');
+        const toAddress    = target.getHexAddress();
         const serializedTx = account.tx(toAddress, AMOUNT_TO_SEND);
 
         transactions.push(serializedTx);
 
         const tx = helpers.toTxObject(serializedTx);
 
-        tx.from.should.be.equal('0x' + account.address.toString('hex'));
+        tx.from.should.be.equal(account.getHexAddress());
         tx.to.should.be.equal(toAddress);
     });
 
     it('vote tx', () => {
-        const serializedTx = account.vote('0x' + target.address.toString('hex'));
+        const serializedTx = account.vote(target.getHexAddress());
 
         transactions.push(serializedTx);
     });
