@@ -15,6 +15,7 @@ const chainData     = require('core/chaindata');
 
 exports.generateReceipt  = generateReceipt;
 exports.getBlockProducer = getBlockProducer;
+exports.getDelegates = getDelegates;
 
 /**
  * Initial allocation of account balances from genesis.
@@ -101,34 +102,14 @@ exports.getVotesFor = async function getVotesFor(address) {
 };
 
 /**
- * Get all delegates sorted by their votes.
- *
- * @returns {Promise.<Object[]>|Object[]} Delegates array.
- */
-exports.getDelegates = async function getDelegates() {
-    let delegates = await getRawDelegates();
-
-    delegates = Object.keys(delegates).map(delegate => {
-        return {
-            delegate,
-            voteAmount: delegates[delegate]
-        };
-    });
-
-    delegates.sort((a,b) => b.voteAmount - a.voteAmount);
-
-    return delegates;
-};
-
-/**
  * Returns 31 active delegates.
  *
  * @returns {Promise.<Object[]>}
  */
 exports.getActiveDelegates = async function getActiveDelegates() {
-    const delegates = await this.getDelegates();
+    const delegates = await getDelegates();
 
-    return delegates.slice(0, 31);
+    return delegates.slice(0, constants.ACTIVE_DELEGATES_COUNT);
 };
 
 /**
@@ -137,9 +118,10 @@ exports.getActiveDelegates = async function getActiveDelegates() {
  * @returns {Promise.<Object[]>}
  */
 exports.getSuccessorDelegates = async function getSuccessorDelegates() {
-    const delegates = await this.getDelegates();
+    const delegates         = await getDelegates();
+    const delegatesListEnd  = constants.ACTIVE_DELEGATES_COUNT + constants.SUCCESSOR_DELEGATES_COUNT;
 
-    return delegates.slice(31, 62);
+    return delegates.slice(constants.ACTIVE_DELEGATES_COUNT, delegatesListEnd);
 };
 
 /**
@@ -390,4 +372,24 @@ async function getAccount(address, block) {
     }
 
     return account;
+}
+
+/**
+ * Get all delegates sorted by their votes.
+ *
+ * @returns {Promise.<Object[]>|Object[]} Delegates array.
+ */
+async function getDelegates() {
+    let delegates = await getRawDelegates();
+
+    delegates = Object.keys(delegates).map(delegate => {
+        return {
+            delegate,
+            voteAmount: delegates[delegate]
+        };
+    });
+
+    delegates.sort((a,b) => b.voteAmount - a.voteAmount);
+
+    return delegates;
 }
