@@ -6,6 +6,7 @@
 
 'use strict';
 
+const math          = require('lib/math');
 const events        = require('lib/events');
 const pool          = require('core/pool');
 const tp            = require('core/transport');
@@ -20,17 +21,6 @@ const blockProducer = require('services/wallet');
  * @type {Number}
  */
 const DELEGATES = +process.env.DELEGATES || 33;
-
-/**
- * Total number of certificates in the network.
- *
- * @todo remake this part of app
- *
- * ENV: TOTAL_CERTIFICATES
- * @default 100000
- * @type {Number}
- */
-const TOTAL_CERTIFICATES = process.env.TOTAL_CERTIFICATES || 100000;
 
 (async function init() {
 
@@ -75,7 +65,7 @@ async function waitAndProduce() {
     const isProducer = await isMyRound(randoms[0].data);
 
     if (!isProducer) {
-        console.log('I AM NO PRODUCER, ');
+        console.log('I AM NO PRODUCER');
         return;
     }
 
@@ -147,17 +137,13 @@ async function isMyRound(frn) {
         }
     });
 
-    // get FRN percentage from all certificates.
-    const percentage = frn / TOTAL_CERTIFICATES;
+    const index      = math.findCertificateIndex(frn, orderedCertificates.length);
+    const chosenCert = orderedCertificates[index];
+    const chosenBp   = block.state.find(el => el.certificates.includes(chosenCert));
 
-    // select certificate with the same percentage owned by active producer.
-    const certificateIndex  = Math.floor(percentage * orderedCertificates.length);
-    const chosenCertificate = orderedCertificates[certificateIndex];
-    const chosenProducer    = block.state.find(el => el.certificates.includes(chosenCertificate));
-
-    console.log('PERC, FRN, TOTAL', percentage, frn, TOTAL_CERTIFICATES);
-    console.log('CHOSEN', chosenProducer);
+    console.log('PERC, FRN, TOTAL', index, frn, orderedCertificates.length);
+    console.log('CHOSEN', chosenBp);
     console.log('MY IS', blockProducer.address.toString('hex'));
 
-    return (chosenProducer.address === blockProducer.address.toString('hex'));
+    return (chosenBp.address === blockProducer.address.toString('hex'));
 }
