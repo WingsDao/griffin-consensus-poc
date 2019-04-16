@@ -4,6 +4,7 @@
   "description": "Griffin is blockchain consensus based on a combination of Delegated Proof of Stake (DPoS) and Block Producers (PoS)",
   "main": "index.js",
   "scripts": {
+    "postinstall": "mkdir data",
     "test": "NODE_PATH=. mocha test"
   },
   "repository": {
