@@ -41,8 +41,8 @@ const AMOUNT = '0x64'; // 100
  * @listens events.GIMME_COINS
  * @emits   events.NEW_TRANSACTION
  *
- * @param  {String} addr Address to send coins to
+ * @param  {String} addr 0x-prefixed address to send coins to
  */
 function listenAndSend(addr) {
-    tp.send(evt.NEW_TRANSACTION, acc.tx('0x' + addr, AMOUNT));
+    tp.send(evt.NEW_TRANSACTION, acc.tx(addr, AMOUNT));
 }

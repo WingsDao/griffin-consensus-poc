@@ -85,7 +85,7 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
  * @returns {string} Address as hex string.
  */
 Account.prototype.getHexAddress = function getHexAddress() {
-  return '0x' + this.address.toString('hex');
+    return '0x' + this.address.toString('hex');
 };
 
 /**
