@@ -73,8 +73,8 @@ exports.pull = function pullFromPeer(host, port, stream) {
     return new Promise((resolve, reject) => {
         http.get({host, port}, (res) => {
             res.pipe(stream);
-            res.on('end', resolve);
             res.on('error', reject);
+            stream.on('finish', resolve);
         });
     });
 };

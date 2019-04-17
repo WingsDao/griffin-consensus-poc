@@ -12,7 +12,7 @@
 
 // consts, core, service - order suggestion
 const events = require('lib/events');
-const pool   = require('core/pool');
+const pool   = require('core/db').pool;
 const chain  = require('core/db').chain;
 const peer   = require('core/file-peer');
 const tp     = require('core/transport');
@@ -40,6 +40,9 @@ exports.pool = async function syncPool() {
 
     const peerData = await waiter.waitFor(events.POOL_SERVER_CREATED, WAIT_FOR);
     const peerPort = peerData.data;
+
+    // Clean up before syncing
+    await pool.drain();
 
     return (peerPort !== null)
         && peer.pull('localhost', peerPort, pool.createWritableStream(false)).catch(console.error)

@@ -8,7 +8,7 @@
 
 const math          = require('lib/math');
 const events        = require('lib/events');
-const pool          = require('core/pool');
+const pool          = require('core/db').pool;
 const tp            = require('core/transport');
 const chaindata     = require('core/db').chain;
 const peer          = require('core/file-peer');
@@ -69,11 +69,9 @@ async function waitAndProduce() {
         return;
     }
 
-    console.log('AMA PRODUCER, BITCHES');
-
     // Drain a pool and create new block
     const parentBlock  = await chaindata.getLatest();
-    const transactions = await pool.drain();
+    const transactions = await pool.drain().catch(console.error);
     const block        = blockProducer.produceBlock(parentBlock, transactions);
 
     block.randomNumber = randoms[0].data;

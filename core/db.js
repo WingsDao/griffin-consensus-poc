@@ -9,7 +9,6 @@ const util      = require('util');
 const stream    = require('stream');
 const levelup   = require('levelup');
 const leveldown = require('leveldown');
-const genesis   = require(process.env.GENESIS_PATH || 'genesis.json');
 
 /**
  * Data directory for client
@@ -20,17 +19,61 @@ const genesis   = require(process.env.GENESIS_PATH || 'genesis.json');
  */
 const DATADIR = process.env.DATADIR || 'data';
 
-const LATEST = 'latest';
 const CHAIN  = 'chain';
 const POOL   = 'pool';
 
-exports.chain = spawnChainData();
-exports.pool  = spawnDatabase('pool');
+exports.chain = spawnChainDB();
+exports.pool  = spawnPoolDB();
+
+function spawnPoolDB() {
+    const db = spawnDatabase(POOL);
+
+    return {
+        add(tx) {
+            return db.put(tx, tx);
+        },
+
+        getAll() {
+            const stream = db.createValueStream();
+            return new Promise((resolve, reject) => {
+                const res = [];
+                stream.on('data',  (tx) => res.push(tx.toString()));
+                stream.on('end',   ()   => resolve(res));
+                stream.on('error', reject);
+            });
+        },
+
+        async drain() {
+            const txs = await this.getAll();
+            await this.destroy();
+            return txs;
+        },
+
+        createReadableStream() {
+            return db.createValueStream();
+        },
+
+        createWritableStream() {
+            const writeStream = new stream.Writable({
+                write(chunk, encoding, cb) {
+                    const tx = chunk.toString();
+                    return db.put(tx, tx).then(() => cb(null, tx));
+                }
+            });
+
+            return writeStream;
+        },
+
+        destroy() {
+            return db.close().then(() => destroyDatabase(POOL)).then(() => db.open());
+        }
+    };
+}
 
 /**
  * @return {Object} leveldb instance
  */
-function spawnChainData() {
+function spawnChainDB() {
     const db      = spawnDatabase(CHAIN);
     const genesis = require(process.env.GENESIS_PATH || 'genesis.json');
 
@@ -70,8 +113,10 @@ function spawnChainData() {
         createWritableStream() {
             const writeStream = new stream.Writable({
                 write(chunk, encoding, cb) {
-                    console.log(chunk.toString());
-                    return cb(null, chunk.toString());
+                    const string = chunk.toString();
+                    const number = JSON.parse(string).number;
+
+                    return db.put(number, string).then(() => cb(null, string));
                 }
             });
 

@@ -4,7 +4,7 @@
 
 'use strict';
 
-const pool      = require('core/pool');
+const pool      = require('core/db').pool;
 const events    = require('lib/events');
 const peer      = require('core/file-peer');
 const chaindata = require('core/db').chain;

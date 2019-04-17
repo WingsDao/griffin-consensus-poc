@@ -8,8 +8,9 @@
 
 process.stdin.resume();
 
-const tp   = require('core/transport');
 const wait = require('util').promisify(setTimeout);
+const tp   = require('core/transport');
+const sync = require('services/sync');
 
 (async function initServices() {
 
@@ -17,10 +18,16 @@ const wait = require('util').promisify(setTimeout);
 
     // More than one node in network
     if (tp.knownNodes.size > 1) {
-        console.log('Sync is currently unavailable');
+
+        await Promise.all([
+            sync.chain(),
+            sync.pool()
+        ]);
+
+        console.log('Synced');
     }
 
-})().then(function runClient() {
+})().then(async function runClient() {
 
     console.log('Starting observer');
 
