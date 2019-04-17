@@ -6,9 +6,8 @@
 
 require('chai').should();
 
-const Account   = require('core/account');
-const chaindata     = require('core/chaindata');
-const genesis   = require('genesis');
+const Account    = require('core/account');
+const genesis    = require('genesis');
 const blockchain = require('core/blockchain');
 
 

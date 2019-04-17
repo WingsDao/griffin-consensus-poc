@@ -10,7 +10,7 @@ const math          = require('lib/math');
 const events        = require('lib/events');
 const pool          = require('core/pool');
 const tp            = require('core/transport');
-const chaindata     = require('core/chaindata');
+const chaindata     = require('core/db').chain;
 const peer          = require('core/file-peer');
 const sync          = require('services/sync');
 const waiter        = require('services/waiter');
@@ -68,6 +68,8 @@ async function waitAndProduce() {
         console.log('I AM NO PRODUCER');
         return;
     }
+
+    console.log('AMA PRODUCER, BITCHES');
 
     // Drain a pool and create new block
     const parentBlock  = await chaindata.getLatest();
@@ -130,6 +132,8 @@ async function isMyRound(frn) {
         return true;
     }
 
+    console.log(block, typeof block);
+
     // get all certificates from latest block
     block.state.forEach((account) => {
         if (activeProducers.includes(account.address)) {
@@ -137,9 +141,13 @@ async function isMyRound(frn) {
         }
     });
 
+    console.log(orderedCertificates);
+
     const index      = math.findCertificateIndex(frn, orderedCertificates.length);
     const chosenCert = orderedCertificates[index];
     const chosenBp   = block.state.find(el => el.certificates.includes(chosenCert));
+
+    // console.log(index, chosenCert);
 
     console.log('PERC, FRN, TOTAL', index, frn, orderedCertificates.length);
     console.log('CHOSEN', chosenBp);

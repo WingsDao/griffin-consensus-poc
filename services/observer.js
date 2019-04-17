@@ -7,7 +7,7 @@
 const pool      = require('core/pool');
 const events    = require('lib/events');
 const peer      = require('core/file-peer');
-const chaindata = require('core/chaindata');
+const chaindata = require('core/db').chain;
 const wallet    = require('services/wallet');
 
 require('core/transport')
@@ -26,11 +26,9 @@ require('core/transport')
 
             if (lastBlock.number >= block.number) { return; }
 
-            console.log('New block accepted');
-
             const newBlock = await peer.pullString(meta.address, port);
 
-            await chaindata.add(newBlock);
+            await chaindata.add(block.number, newBlock);
         });
     })
 
@@ -67,10 +65,12 @@ require('core/transport')
     })
 
     .on(events.PING, function areYouLookingForMe(data, msg) {
-        const addr = '0x' + wallet.address.toString('hex');
+        const addr = wallet.getHexAddress();
 
         if (data === addr) {
             this.send(events.PONG, addr, msg.sender);
         }
     })
+
+
 ;

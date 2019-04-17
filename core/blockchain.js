@@ -11,7 +11,7 @@ const keccak256     = require('keccak256');
 const ethRpc        = require('eth-json-rpc')('http://localhost:8545');
 const helpers       = require('lib/helpers');
 const constants     = require('lib/constants');
-const chainData     = require('core/chaindata');
+const chainData     = require('core/db').chain;
 
 exports.generateReceipt  = generateReceipt;
 exports.getBlockProducer = getBlockProducer;
@@ -26,8 +26,7 @@ exports.getDelegates = getDelegates;
  */
 exports.initiateGenesisState = function initiateGenesisState(genesisBlock, block) {
     for (const allocObject of genesisBlock.alloc) {
-        const address = Object.keys(allocObject)[0];
-
+        const address          = Object.keys(allocObject)[0];
         const allocatedAccount = allocObject[address];
 
         const account = helpers.emptyAccount(address);
