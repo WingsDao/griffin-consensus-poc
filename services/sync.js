@@ -45,7 +45,7 @@ exports.pool = async function syncPool() {
     await pool.drain();
 
     return (peerPort !== null)
-        && peer.pull('localhost', peerPort, pool.createWritableStream(false)).catch(console.error)
+        && peer.pull('localhost', peerPort, pool.createWriteStream(false)).catch(console.error)
         || null;
 };
 
@@ -70,6 +70,6 @@ exports.chain = async function syncChain() {
     await chain.destroy();
 
     return (peerPort !== null)
-        && peer.pull('localhost', peerPort, chain.createWritableStream(false)).catch(console.error)
+        && peer.pull('localhost', peerPort, chain.createWriteStream(false)).catch(console.error)
         || null;
 };

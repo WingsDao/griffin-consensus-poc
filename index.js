@@ -20,9 +20,9 @@ const sync = require('services/sync');
     if (tp.knownNodes.size > 1) {
 
         await Promise.all([
-            sync.chain(),
+            // sync.chain(),
             sync.pool()
-        ]);
+        ]).catch(console.error);
 
         console.log('Synced');
     }
