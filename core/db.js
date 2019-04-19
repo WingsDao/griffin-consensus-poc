@@ -4,12 +4,13 @@
 
 'use strict';
 
-const path      = require('path');
-const util      = require('util');
-const stream    = require('stream');
-const levelup   = require('levelup');
-const leveldown = require('leveldown');
-const genesis   = require(process.env.GENESIS_PATH || 'genesis.json');
+const path        = require('path');
+const util        = require('util');
+const stream      = require('stream');
+const levelup     = require('levelup');
+const leveldown   = require('leveldown');
+const Genesis     = require('lib/genesis');
+const genesis     = require(process.env.GENESIS_PATH || 'genesis.json');
 
 /**
  * Data directory for client
@@ -32,10 +33,12 @@ class DB {
      * @param {String} name Name of the database (also name of the folder in DATADIR)
      */
     constructor(name) {
-        const db = levelup(leveldown(path.join(DATADIR, name)));
+        const db           = levelup(leveldown(path.join(DATADIR, name)));
+        const genesisBlock = Genesis.genesisToBlock(genesis);
 
         Object.defineProperty(this, 'name', {value: name});
         Object.defineProperty(this, 'db',   {value: db});
+        Object.defineProperty(this, 'genesis', {value: genesisBlock});
     }
 
     /**
@@ -141,7 +144,7 @@ class Chain extends DB {
      */
     getBlock(number) {
         return (number === 0)
-            && Promise.resolve(genesis)
+            && Promise.resolve(this.genesis)
             || getOrNull(this.db, number);
     }
 
@@ -158,7 +161,7 @@ class Chain extends DB {
                 .next((err, key, value) => {
                     return (err)
                         && reject(err)
-                        || resolve(value && JSON.parse(value.toString()) || genesis);
+                        || resolve(value && JSON.parse(value.toString()) || this.genesis);
                 });
         });
     }

@@ -139,13 +139,9 @@ async function isMyRound(frn) {
         }
     });
 
-    console.log(orderedCertificates);
-
     const index      = math.findCertificateIndex(frn, orderedCertificates.length);
     const chosenCert = orderedCertificates[index];
     const chosenBp   = block.state.find(el => el.certificates.includes(chosenCert));
-
-    // console.log(index, chosenCert);
 
     console.log('PERC, FRN, TOTAL', index, frn, orderedCertificates.length);
     console.log('CHOSEN', chosenBp);
