@@ -10,6 +10,7 @@ const stream      = require('stream');
 const levelup     = require('levelup');
 const leveldown   = require('leveldown');
 const Genesis     = require('lib/genesis');
+const genesis     = require(process.env.GENESIS_PATH || 'genesis.json');
 
 /**
  * Data directory for client
@@ -19,14 +20,6 @@ const Genesis     = require('lib/genesis');
  * @type {String}
  */
 const DATADIR = process.env.DATADIR || 'data';
-
-/**
- * Path to genesis block.
- *
- * @default 'genesis.json'
- * @type {String}
- */
-const genesisPath = process.env.GENESIS_PATH || 'genesis.json';
 
 const CHAIN  = 'chain';
 const POOL   = 'pool';
@@ -40,12 +33,12 @@ class DB {
      * @param {String} name Name of the database (also name of the folder in DATADIR)
      */
     constructor(name) {
-        const db      = levelup(leveldown(path.join(DATADIR, name)));
-        const genesis = Genesis.loadFromFile(genesisPath).getBlock();
+        const db           = levelup(leveldown(path.join(DATADIR, name)));
+        const genesisBlock = Genesis.genesisToBlock(genesis);
 
         Object.defineProperty(this, 'name', {value: name});
         Object.defineProperty(this, 'db',   {value: db});
-        Object.defineProperty(this, 'genesis', {value: genesis});
+        Object.defineProperty(this, 'genesis', {value: genesisBlock});
     }
 
     /**

@@ -9,7 +9,7 @@ require('chai').should();
 const Account = require('core/account');
 const helpers = require('lib/helpers');
 const Genesis = require('lib/genesis');
-
+const genesis = require('genesis');
 
 /**
  * Secret key used for testing.
@@ -17,14 +17,6 @@ const Genesis = require('lib/genesis');
  * @type {String}
  */
 const SECRET_KEY  = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c3b9f489f7085cb50', 'hex');
-
-/**
- * Path to genesis block.
- *
- * @default 'genesis.json'
- * @type {Strig}
- */
-const genesisPath = process.env.GENESIS_PATH || 'genesis.json';
 
 describe('Accounts', () => {
     let account = {};
@@ -96,8 +88,7 @@ describe('Accounts', () => {
     });
 
     it('produce first block and verify state', () => {
-        const genesisBlock = Genesis.loadFromFile(genesisPath).getBlock();
-        block = account.produceBlock(genesisBlock, transactions);
+        block = account.produceBlock(Genesis.genesisToBlock(genesis), transactions);
 
         const accountState = block.state[0];
 
