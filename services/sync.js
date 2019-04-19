@@ -12,8 +12,8 @@
 
 // consts, core, service - order suggestion
 const events = require('lib/events');
-const pool   = require('core/pool');
-const chain  = require('core/chaindata');
+const pool   = require('core/db').pool;
+const chain  = require('core/db').chain;
 const peer   = require('core/file-peer');
 const tp     = require('core/transport');
 const waiter = require('services/waiter');
@@ -41,8 +41,11 @@ exports.pool = async function syncPool() {
     const peerData = await waiter.waitFor(events.POOL_SERVER_CREATED, WAIT_FOR);
     const peerPort = peerData.data;
 
+    // Clean up before syncing
+    await pool.drain();
+
     return (peerPort !== null)
-        && peer.pull('localhost', peerPort, pool.createWritableStream(false)).catch(console.error)
+        && peer.pull('localhost', peerPort, pool.createWriteStream(false)).catch(console.error)
         || null;
 };
 
@@ -63,7 +66,10 @@ exports.chain = async function syncChain() {
     const peerData = await waiter.waitFor(events.CHAINDATA_SERVER_CREATED, WAIT_FOR);
     const peerPort = peerData.data;
 
+    // Clean up before syncing
+    await chain.destroy();
+
     return (peerPort !== null)
-        && peer.pull('localhost', peerPort, chain.createWritableStream(false)).catch(console.error)
+        && peer.pull('localhost', peerPort, chain.createWriteStream(false)).catch(console.error)
         || null;
 };

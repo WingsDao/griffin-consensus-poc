@@ -18,7 +18,8 @@
 
 'use strict';
 
-const http = require('http');
+const http   = require('http');
+const stream = require('stream');
 
 /**
  * Create one-request server on random port with given file contents
@@ -31,20 +32,29 @@ const http = require('http');
 exports.peer = function createFileServer(fileStream, connections = 1, aliveFor = 5000) {
 
     const port    = randomPort();
+    const streams = Array.from(Array(connections)).map(() => fileStream.pipe(new stream.PassThrough));
     const promise = new Promise((resolve, reject) => {
 
-        let requests  = 0;
-        const server  = http.createServer();
-        const success = () => server.close() && resolve({requests, aliveFor});
+        let requests = 0;
+        const server = http.createServer();
 
         server.on('error', reject);
         server.on('request', (req, res) => {
-            res.on('finish', () => (++requests === connections) && success());
-            fileStream.pipe(res);
+            if (requests < connections) {
+                const reqStream = streams[requests];
+                res.on('finish', () => (++requests === (connections - 1)) && success());
+                reqStream.pipe(res);
+            }
         });
 
         server.listen(port);
         setTimeout(success, aliveFor);
+
+        function success() {
+            server.close();
+            streams.slice(requests).map((stream) => stream.destroy);
+            resolve({requests, aliveFor});
+        }
     });
 
     return {port, promise};
@@ -63,8 +73,8 @@ exports.pull = function pullFromPeer(host, port, stream) {
     return new Promise((resolve, reject) => {
         http.get({host, port}, (res) => {
             res.pipe(stream);
-            res.on('end', resolve);
             res.on('error', reject);
+            stream.on('finish', resolve);
         });
     });
 };

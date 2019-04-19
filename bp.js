@@ -7,8 +7,8 @@
 const wait      = require('util').promisify(setTimeout);
 const Account   = require('core/account');
 const transport = require('core/transport');
-const pool      = require('core/pool');
-const chaindata = require('core/chaindata');
+const pool      = require('core/db').pool;
+const chaindata = require('core/db').chain;
 const events    = require('lib/events');
 const peer      = require('core/file-peer');
 
@@ -36,9 +36,7 @@ require('services/observer');
 (async function newBlock() {
 
     const parentBlock  = await chaindata.getLatest();
-    const transactions = await pool.getAll();
-
-    await pool.drain();
+    const transactions = await pool.drain();
 
     const block = producer.produceBlock(parentBlock, transactions);
 

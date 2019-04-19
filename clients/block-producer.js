@@ -8,9 +8,9 @@
 
 const math          = require('lib/math');
 const events        = require('lib/events');
-const pool          = require('core/pool');
+const pool          = require('core/db').pool;
 const tp            = require('core/transport');
-const chaindata     = require('core/chaindata');
+const chaindata     = require('core/db').chain;
 const peer          = require('core/file-peer');
 const sync          = require('services/sync');
 const waiter        = require('services/waiter');
@@ -71,7 +71,7 @@ async function waitAndProduce() {
 
     // Drain a pool and create new block
     const parentBlock  = await chaindata.getLatest();
-    const transactions = await pool.drain();
+    const transactions = await pool.drain().catch(console.error);
     const block        = blockProducer.produceBlock(parentBlock, transactions);
 
     block.randomNumber = randoms[0].data;
@@ -129,6 +129,8 @@ async function isMyRound(frn) {
         // Object.assign(block, blockchain.initiateGenesisState(block, {state: []}));
         return true;
     }
+
+    console.log(block, typeof block);
 
     // get all certificates from latest block
     block.state.forEach((account) => {

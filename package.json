@@ -4,7 +4,7 @@
   "description": "Griffin is blockchain consensus based on a combination of Delegated Proof of Stake (DPoS) and Block Producers (PoS)",
   "main": "index.js",
   "scripts": {
-    "postinstall": "mkdir data",
+    "postinstall": "mkdir -p data",
     "test": "NODE_PATH=. mocha test"
   },
   "repository": {
@@ -24,6 +24,8 @@
     "ethereumjs-tx": "^1.3.7",
     "ethereumjs-util": "^6.1.0",
     "keccak256": "^1.0.0",
+    "leveldown": "^5.0.1",
+    "levelup": "^4.0.1",
     "merkletreejs": "0.0.22",
     "rlp": "^2.2.2",
     "secp256k1": "^3.6.2"

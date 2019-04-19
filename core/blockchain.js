@@ -11,38 +11,11 @@ const keccak256     = require('keccak256');
 const ethRpc        = require('eth-json-rpc')('http://localhost:8545');
 const helpers       = require('lib/helpers');
 const constants     = require('lib/constants');
-const chainData     = require('core/chaindata');
+const chainData     = require('core/db').chain;
 
 exports.generateReceipt  = generateReceipt;
 exports.getBlockProducer = getBlockProducer;
 exports.getDelegates = getDelegates;
-
-/**
- * Initial allocation of account balances from genesis.
- *
- * @param  {Object}  genesisBlock Genesis block.
- * @param  {Object}  block
- * @return {Object}
- */
-exports.initiateGenesisState = function initiateGenesisState(genesisBlock, block) {
-    for (const allocObject of genesisBlock.alloc) {
-        const address = Object.keys(allocObject)[0];
-
-        const allocatedAccount = allocObject[address];
-
-        const account = helpers.emptyAccount(address);
-
-        Object.assign(account, {
-            balance:      allocatedAccount.balance      || 0,
-            votes:        allocatedAccount.votes        || [],
-            certificates: allocatedAccount.certificates || []
-        });
-
-        block.state.push(account);
-    }
-
-    return block;
-};
 
 /**
  * Transaction handling entrypoint.
