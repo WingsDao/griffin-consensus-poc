@@ -4,12 +4,12 @@
 
 'use strict';
 
-const path      = require('path');
-const util      = require('util');
-const stream    = require('stream');
-const levelup   = require('levelup');
-const leveldown = require('leveldown');
-const genesis   = require(process.env.GENESIS_PATH || 'genesis.json');
+const path        = require('path');
+const util        = require('util');
+const stream      = require('stream');
+const levelup     = require('levelup');
+const leveldown   = require('leveldown');
+const Genesis     = require('lib/genesis');
 
 /**
  * Data directory for client
@@ -19,6 +19,14 @@ const genesis   = require(process.env.GENESIS_PATH || 'genesis.json');
  * @type {String}
  */
 const DATADIR = process.env.DATADIR || 'data';
+
+/**
+ * Path to genesis block.
+ *
+ * @default 'genesis.json'
+ * @type {String}
+ */
+const genesisPath = process.env.GENESIS_PATH || 'genesis.json';
 
 const CHAIN  = 'chain';
 const POOL   = 'pool';
@@ -32,10 +40,12 @@ class DB {
      * @param {String} name Name of the database (also name of the folder in DATADIR)
      */
     constructor(name) {
-        const db = levelup(leveldown(path.join(DATADIR, name)));
+        const db      = levelup(leveldown(path.join(DATADIR, name)));
+        const genesis = Genesis.loadFromFile(genesisPath).getBlock();
 
         Object.defineProperty(this, 'name', {value: name});
         Object.defineProperty(this, 'db',   {value: db});
+        Object.defineProperty(this, 'genesis', {value: genesis});
     }
 
     /**
@@ -141,7 +151,7 @@ class Chain extends DB {
      */
     getBlock(number) {
         return (number === 0)
-            && Promise.resolve(genesis)
+            && Promise.resolve(this.genesis)
             || getOrNull(this.db, number);
     }
 
@@ -158,7 +168,7 @@ class Chain extends DB {
                 .next((err, key, value) => {
                     return (err)
                         && reject(err)
-                        || resolve(value && JSON.parse(value.toString()) || genesis);
+                        || resolve(value && JSON.parse(value.toString()) || this.genesis);
                 });
         });
     }

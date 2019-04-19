@@ -8,7 +8,7 @@ require('chai').should();
 
 const Account    = require('core/account');
 const blockchain = require('core/blockchain');
-const genesis    = require('genesis');
+const Genesis = require('lib/genesis');
 
 
 /**
@@ -16,9 +16,17 @@ const genesis    = require('genesis');
  *
  * @type {String}
  */
-const SECRET_KEY = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c3b9f489f7085cb50', 'hex');
+const SECRET_KEY  = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c3b9f489f7085cb50', 'hex');
 
-describe('Chain', () => {
+/**
+ * Path to genesis block.
+ *
+ * @default 'genesis.json'
+ * @type {Strig}
+ */
+const genesisPath = process.env.GENESIS_PATH || 'genesis.json';
+
+describe('Blockchain', () => {
     let account        = {};
     let delegate       = {};
     let delegates      = [];
@@ -27,6 +35,8 @@ describe('Chain', () => {
     before('create', async () => {
         let serializedTx = {};
         const transactions = [];
+
+        const genesisBlock = Genesis.loadFromFile(genesisPath).getBlock();
 
         account  = Account(SECRET_KEY);
         delegate = Account();
@@ -40,7 +50,7 @@ describe('Chain', () => {
         serializedTx = account.stake(100);
         transactions.push(serializedTx);
 
-        account.produceBlock(genesis, transactions);
+        account.produceBlock(genesisBlock, transactions);
     });
 
     it('get account balance', async () => {
