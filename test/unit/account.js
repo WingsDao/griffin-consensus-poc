@@ -9,7 +9,6 @@ require('chai').should();
 const Account = require('core/account');
 const helpers = require('lib/helpers');
 const genesis = require('genesis');
-const parser  = require('lib/parser');
 
 /**
  * Secret key used for testing.
@@ -92,8 +91,6 @@ describe('Accounts', () => {
 
         const accountState = block.state[0];
 
-        console.log('Account state:', accountState);
-
         const currentAmount = INITIAL_AMOUNT - AMOUNT_TO_SEND - AMOUNT_TO_VOTE;
 
         accountState.balance.should.be.equal(currentAmount);
@@ -101,18 +98,10 @@ describe('Accounts', () => {
         accountState.certificates.length.should.be.equal(1);
     });
 
-    it('parse block state', () => {
-        const normalizedState = parser(block.state);
-
-        console.log('Delegates:', normalizedState.delegates);
-        console.log('Amount of certificates:', normalizedState.totalCertificates);
-    });
-
     it('sign message with account secret key', () => {
         signature = account.signMessage(MESSAGE);
 
         signature.length.should.be.equal(64);
-        console.log('Signature: ', signature);
     });
 
     it('verify signed message', () => {
