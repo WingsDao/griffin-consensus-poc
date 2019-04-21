@@ -1,11 +1,25 @@
 /**
- * @module file-peer
+ * Main module for creating temporary HTTP server for sharing and steaming big data.
+ * As UDP is the main protocol inside this PoC and it has limitation of 65536 bytes per message.
+ *
+ * To share bigger data we use temporary HTTP servers.
+ * Server listens on random port in range 5000-9999.
+ *
+ * Each server has two shutdown conditions:
+ * - by number of requests (connections argument)
+ * - by timeout (aliveFor argument)
+ *
+ * When one of these conditions reached, server shuts down.
+ *
+ * QUESTION: we may return Promise that would end on http.Server 'close' event. Think about it!
+ *
+ * @module core/file-peer
  */
 
 'use strict';
 
-const http     = require('http');
-const Readable = require('stream').Readable;
+const http   = require('http');
+const stream = require('stream');
 
 /**
  * Create one-request server on random port with given file contents
@@ -17,33 +31,35 @@ const Readable = require('stream').Readable;
  */
 exports.peer = function createFileServer(fileStream, connections = 1, aliveFor = 5000) {
 
-    let pulls    = 0;
-    const port   = randomPort();
-    const server = http.createServer();
+    const port    = randomPort();
+    const streams = Array.from(Array(connections)).map(() => fileStream.pipe(new stream.PassThrough));
+    const promise = new Promise((resolve, reject) => {
 
-    server.on('request', (req, res) => {
-        res.on('finish', () => (++pulls === connections) && server.close());
-        fileStream.pipe(res);
+        let requests = 0;
+        const server = http.createServer();
+
+        server.on('error', reject);
+        server.on('request', (req, res) => {
+            if (requests < connections) {
+                const reqStream = streams[requests];
+                res.on('finish', () => (++requests === (connections - 1)) && success());
+                reqStream.pipe(res);
+            }
+        });
+
+        server.listen(port);
+        setTimeout(success, aliveFor);
+
+        function success() {
+            server.close();
+            streams.slice(requests).map((stream) => stream.destroy);
+            resolve({requests, aliveFor});
+        }
     });
 
-    server.listen(port);
-    setTimeout(() => server.close(), aliveFor);
-
-    return port;
+    return {port, promise};
 };
 
-exports.peerString = function createBufferServer(string, connections = 1) {
-    const stream = new Readable;
-
-    if (string instanceof Object) {
-        string = JSON.stringify(string);
-    }
-
-    stream.push(string);
-    stream.push(null);
-
-    return exports.peer(stream, connections);
-};
 
 /**
  * Pull data from peer to file via HTTP
@@ -54,11 +70,60 @@ exports.peerString = function createBufferServer(string, connections = 1) {
  * @return {Promise}                Promise tbat's gonna be resolved on request end
  */
 exports.pull = function pullFromPeer(host, port, stream) {
-
     return new Promise((resolve, reject) => {
         http.get({host, port}, (res) => {
             res.pipe(stream);
-            res.on('end', resolve);
+            res.on('error', reject);
+            stream.on('finish', resolve);
+        });
+    });
+};
+
+/**
+ * Peer single string (usually a JSON) via creating short-time HTTP server
+ *
+ * @param  {String|Object} string          Data to peer (share via HTTP)
+ * @param  {Number}        [connections=1] Number of connections after which server is closed
+ * @param  {Number}        [aliveFor=5000] Number of ms to wait until server shutdown
+ * @return {Number}                        Port to peer from
+ */
+exports.peerString = function createBufferServer(string, connections = 1, aliveFor = 5000) {
+    if (string instanceof Object) {
+        string = JSON.stringify(string);
+    }
+
+    const port    = randomPort();
+    const promise = new Promise((resolve, reject) => {
+
+        let requests  = 0;
+        const server  = http.createServer();
+        const success = () => server.close() && resolve({requests, aliveFor});
+
+        server.on('error', reject);
+        server.on('request', (req, res) => {
+            res.end(string) && (++requests === connections) && success();
+        });
+
+        server.listen(port);
+        setTimeout(success, aliveFor);
+    });
+
+    return {port, promise};
+};
+
+/**
+ * Pull data from peer via HTTP as Promise
+ *
+ * @param  {String}  host Host or IP to pull from
+ * @param  {Number}  port Port to request
+ * @return {Promise}      Promise with pulled data
+ */
+exports.pullString = function poolSingleString(host, port) {
+    return new Promise((resolve, reject) => {
+        http.get({host, port}, (res) => {
+            let result = '';
+            res.on('data', (chunk) => (result += chunk));
+            res.on('end',  ()      => resolve(result));
             res.on('error', reject);
         });
     });

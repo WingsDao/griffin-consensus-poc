@@ -7,8 +7,8 @@
 const wait      = require('util').promisify(setTimeout);
 const Account   = require('core/account');
 const transport = require('core/transport');
-const pool      = require('core/pool');
-const chaindata = require('core/chaindata');
+const pool      = require('core/db').pool;
+const chaindata = require('core/db').chain;
 const events    = require('lib/events');
 const peer      = require('core/file-peer');
 
@@ -17,7 +17,7 @@ const peer      = require('core/file-peer');
  *
  * @type {Number}
  */
-const TIMEOUT = 5000;
+const TIMEOUT = 1000;
 
 /**
  * Secret key used for testing.
@@ -31,41 +31,42 @@ const producer = Account(SECRET_KEY);
 console.log(producer.secretKey.toString('hex'));
 console.log('producer', {address: '0x' + producer.address.toString('hex'), publicKey: '0x' + producer.publicKey.toString('hex')});
 
-require('network/observer');
+require('services/observer');
 
 (async function newBlock() {
 
     const parentBlock  = await chaindata.getLatest();
-    const transactions = await pool.getAll();
-
-    await pool.drain();
+    const transactions = await pool.drain();
 
     const block = producer.produceBlock(parentBlock, transactions);
 
     await chaindata.add(block);
-
-
-
-    console.log('new block', block.number);
-
     await streamBlock(block);
 
     // transport.send(events.NEW_BLOCK, block);
 
     return wait(TIMEOUT).then(newBlock);
 
-})();
+})().catch(console.error);
 
 
 (async function newTx() {
 
-    const target       = Account();
-    const serializedTx = producer.tx('0x' + target.address.toString('hex'), '0xff');
+    const target = () => new Account().address;
+    const acc    = producer;
 
-    await transport.send(events.NEW_TRANSACTION, serializedTx);
+    [
+        acc.tx('0x' + target().toString('hex'), '0xff'),
+        acc.stake(100),
+        acc.stake(200),
+        acc.vote('0x' + target().toString('hex'), 100),
+        acc.vote('0x' + target().toString('hex'), 200),
+        acc.vote('0x' + target().toString('hex'), 300)
+    ].forEach((tx) => transport.send(events.NEW_TRANSACTION, tx));
 
     return wait(TIMEOUT / 2).then(newTx);
-})();
+
+})().catch(console.error);
 
 async function streamBlock(block) {
     const nodesCount = transport.knownNodes.size - 1;
@@ -76,7 +77,7 @@ async function streamBlock(block) {
 
     console.log('streaming new block %d to %d nodes', block.number, nodesCount);
 
-    const port = peer.peerString(block, nodesCount);
+    const {port} = peer.peerString(block, nodesCount);
     transport.send(events.NEW_BLOCK, {
         port, block: {
             number:     block.number,
