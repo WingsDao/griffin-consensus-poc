@@ -36,6 +36,10 @@ exports.pool = async function syncPool() {
     const nodes  = await waiter.waitForAll(events.SHARE_POOL, 10, WAIT_FOR);
     const myNode = nodes.sort((a, b) => a.data - b.data)[0];
 
+    if (!myNode) {
+        return;
+    }
+
     tp.send(events.CREATE_POOL_SERVER, null, myNode.msg.sender);
 
     const peerData = await waiter.waitFor(events.POOL_SERVER_CREATED, WAIT_FOR);
@@ -60,6 +64,10 @@ exports.chain = async function syncChain() {
 
     const responses  = await waiter.waitForAll(events.SHARE_CHAIN, 10, 3000);
     const oneAndOnly = responses[0];
+
+    if (!oneAndOnly) {
+        return;
+    }
 
     tp.send(events.CREATE_CHAINDATA_SERVER, null, oneAndOnly.msg.sender);
 

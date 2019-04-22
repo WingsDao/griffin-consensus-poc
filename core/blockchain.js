@@ -115,9 +115,9 @@ exports.getDelegatesCount = async function getDelegatesCount() {
  * @returns {Promise.<boolean>} True/false depends is delegate or not.
  */
 exports.isDelegate = async function isDelegate(address) {
-    const rawDelegates = await getRawDelegates();
+    const delegates = await getRawDelegates();
 
-    return rawDelegates[address] == undefined;
+    return delegates.has(address);
 };
 
 /**
@@ -303,19 +303,27 @@ function getBlockProducer(block, finalRandomNumber) {
 async function getRawDelegates() {
     const latestBlock = await chainData.getLatest();
 
-    const rawDelegates = latestBlock.state.reduce((rawDelegates, account) => {
-        for (let v of account.votes) {
-            if (!rawDelegates[v.delegate]) {
-                rawDelegates[v.delegate] = 0;
-            }
+    const delegates = latestBlock.state
+        .filter((record) => (!!record.votes.length))            // Leave only delegates first
+        .map((account) => [account.address, account]);
 
-            rawDelegates[v.delegate] += parseInt(v.amount);
-        }
 
-        return rawDelegates;
-    }, {});
+    return new Map(delegates);
 
-    return rawDelegates;
+
+    //     .reduce((rawDelegates, account) => {
+    //     for (let v of account.votes) {
+    //         if (!rawDelegates[v.delegate]) {
+    //             rawDelegates[v.delegate] = 0;
+    //         }
+    //
+    //         rawDelegates[v.delegate] += parseInt(v.amount);
+    //     }
+    //
+    //     return rawDelegates;
+    // }, {});
+    //
+    // return rawDelegates;
 }
 
 /**

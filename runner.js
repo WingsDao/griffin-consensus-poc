@@ -44,14 +44,15 @@ for (let i = 0; i < num; i++) {
 
     delegates.push(account);
     genesis.addDelegate(account.address.toString('hex'), DELEGATE_BALANCE);
-}
-
-for (let i = 0; i < num; i++) {
-    const account = Account();
-
-    producers.push(account);
     genesis.addProducer(account.address.toString('hex'), 1);
 }
+
+// for (let i = 0; i < num; i++) {
+//     const account = Account();
+//
+//     producers.push(account);
+//     genesis.addProducer(account.address.toString('hex'), 1);
+// }
 
 genesis.writeToFile(GENESIS_PATH);
 
@@ -107,7 +108,7 @@ function spawnDelegate(e, i) {
     fs.mkdirSync(datadir);
 
     const stream = fs.createWriteStream(datadir + '/out.log', {flags: 'w'});
-    const child  = cp.fork('clients/delegate.js', [], options);
+    const child  = cp.fork('index.js', [1], options);
 
     child.stdout.pipe(stream);
     child.stderr.pipe(stream);

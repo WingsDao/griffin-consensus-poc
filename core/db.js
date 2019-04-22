@@ -133,7 +133,7 @@ class Chain extends DB {
      * @param {String} block  Block to store
      */
     add(number, block) {
-        return this.db.put(number, block);
+        return this.db.put(number, block.constructor === String && block || JSON.stringify(block));
     }
 
     /**

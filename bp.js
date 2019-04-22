@@ -38,16 +38,20 @@ require('services/observer');
     const parentBlock  = await chaindata.getLatest();
     const transactions = await pool.drain();
 
+    console.log(parentBlock.number);
+
     const block = producer.produceBlock(parentBlock, transactions);
 
-    await chaindata.add(block);
+    await chaindata.add(block.number, block);
     await streamBlock(block);
+
+    console.log('NEW BLOCK', block.number, block.hash);
 
     // transport.send(events.NEW_BLOCK, block);
 
     return wait(TIMEOUT).then(newBlock);
 
-})();
+})().catch(console.error);
 
 
 (async function newTx() {

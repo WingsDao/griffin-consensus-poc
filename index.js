@@ -11,10 +11,11 @@ process.stdin.resume();
 const wait = require('util').promisify(setTimeout);
 const tp   = require('core/transport');
 const sync = require('services/sync');
+const evt  = require('lib/events');
+const me   = require('services/wallet');
+const repl = require('repl');
 
 (async function initServices() {
-
-    await wait(3500);
 
     // More than one node in network
     if (tp.knownNodes.size > 1) {
@@ -23,8 +24,6 @@ const sync = require('services/sync');
             // sync.chain(),
             sync.pool()
         ]).catch(console.error);
-
-        console.log('Synced');
     }
 
 })().then(async function runClient() {
@@ -32,4 +31,23 @@ const sync = require('services/sync');
     console.log('Starting observer');
 
     require('services/observer');
+
+    // Attach both roles by default
+    require('roles/block-producer').attach();
+    require('roles/delegate').attach();
+
+    console.log('Starting prompt...');
+
+    const tty = repl.start('> ');
+
+    Object.assign(tty.context, {tp, evt, me});
 });
+
+// QUESTION
+//     ON START ROUND EVENT
+//         AM I DELEGATE?
+//             ATTACH LISTENERS FOR DELEGATE FOR 1 ROUND
+//         AM I PRODUCER?
+//             ATTACH LISTENERS FOR PRODUCER FOR 1 ROUND
+//
+//     ON ROUND END REMOVE ALL LISTENERS AND LIVE FREE

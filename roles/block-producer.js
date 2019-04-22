@@ -12,31 +12,18 @@ const pool          = require('core/db').pool;
 const tp            = require('core/transport');
 const chaindata     = require('core/db').chain;
 const peer          = require('core/file-peer');
-const sync          = require('services/sync');
 const waiter        = require('services/waiter');
 const blockProducer = require('services/wallet');
 
-/**
- * Number of Delegates in network to wait for
- * @type {Number}
- */
-const DELEGATES = +process.env.DELEGATES || 33;
+exports.attach = function attach() {
 
-(async function init() {
-
-    // Sync with other nodes if there are
-    if (tp.knownNodes.size > 1) {
-        await Promise.all([sync.pool(), sync.chain()]);
-    }
-
-})().then(async function main() {
-
-    // Start observing network events
-    require('services/observer');
-
-    // Attach block producer event listener
     tp.on(events.START_ROUND, waitAndProduce);
-});
+};
+
+exports.detach = function detach() {
+
+    tp.off(events.START_ROUND, waitAndProduce);
+};
 
 /**
  * This function is a generic listener for START_ROUND event from
@@ -56,13 +43,13 @@ async function waitAndProduce() {
     //
     // QUESTION: Should we do a check somewhere for round definition or smth. Number of retries mb?
     // We want to let BP know whether round has been restarted so he can drop this listener
-    const randoms = await waiter.waitForAll(events.BP_CATCH_IT, DELEGATES, Infinity);
+    const random = await waiter.waitFor(events.BP_CATCH_IT, Infinity);
 
     // On each round every block producer checks whether he should produce this block.
     // We may want every bp to produce block every round.
     // TODO: remember about backup block producer, as he have to produce as well in order to get block reward.
     // FIXME Supply real FRN.
-    const isProducer = await isMyRound(randoms[0].data);
+    const isProducer = await isMyRound(random.data);
 
     if (!isProducer) {
         console.log('I AM NO PRODUCER');
@@ -74,11 +61,11 @@ async function waitAndProduce() {
     const transactions = await pool.drain().catch(console.error);
     const block        = blockProducer.produceBlock(parentBlock, transactions);
 
-    block.randomNumber = randoms[0].data;
+    block.randomNumber = random;
 
     // Share block with delegates
     // TODO: think of verification: do it in UDP short block or HTTP or both
-    const {port} = peer.peerString(block, DELEGATES);
+    const {port} = peer.peerString(block, );
 
     // Send event so delegates know where to get block
     tp.send(events.VERIFY_BLOCK, {
@@ -129,8 +116,6 @@ async function isMyRound(frn) {
         // Object.assign(block, blockchain.initiateGenesisState(block, {state: []}));
         return true;
     }
-
-    console.log(block, typeof block);
 
     // get all certificates from latest block
     block.state.forEach((account) => {

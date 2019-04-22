@@ -80,9 +80,17 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
 };
 
 /**
+ * 0x-prefixed hex representation on address.
+ * @property {String}
+ */
+Object.defineProperty(Account.prototype, 'hexAddress', {
+    get() { return '0x' + this.address.toString('hex'); }
+});
+
+/**
  * Get address of account as hex string.
  *
- * @returns {string} Address as hex string.
+ * @returns {String} Address as hex string.
  */
 Account.prototype.getHexAddress = function getHexAddress() {
     return '0x' + this.address.toString('hex');

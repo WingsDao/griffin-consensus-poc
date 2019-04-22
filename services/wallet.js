@@ -9,7 +9,8 @@
 
 'use strict';
 
-const Account = require('core/account');
+const Account    = require('core/account');
+const blockchain = require('core/blockchain');
 
 /**
  * Secret key parsed from ENV when provided.
@@ -19,4 +20,16 @@ const Account = require('core/account');
  */
 const SECRET_KEY = process.env.SECRET_KEY && Buffer.from(process.env.SECRET_KEY, 'hex') || null;
 
-module.exports = exports = new Account(SECRET_KEY);
+const me = module.exports = exports = new Account(SECRET_KEY);
+
+/**
+ * Check whether me (account i)
+ * @return {[type]} [description]
+ */
+exports.isDelegate = function () {
+    return blockchain.isDelegate(me.address.toString('hex'));
+};
+
+exports.isProducer = function () {
+
+};

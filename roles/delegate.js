@@ -13,7 +13,6 @@ const Delegate   = require('core/account');
 const tp         = require('core/transport');
 const chaindata  = require('core/db').chain;
 const waiter     = require('services/waiter');
-const sync       = require('services/sync');
 const peer       = require('core/file-peer');
 const delegate   = require('services/wallet');
 
@@ -39,43 +38,20 @@ const delegate   = require('services/wallet');
  */
 const DELEGATES  = '*';
 
-/**
- * Initialize pool and chain on first client start.
- * @todo We may want to move this logic elsewhere as it's the same in bp, index and here.
- */
-(async function init() {
-
-    // Sync with other nodes if there are
-    if (tp.knownNodes.size > 1) {
-        await Promise.all([sync.pool(), sync.chain()]);
-    }
-
-})().then(async function waitForDelegates() {
-
-    tp.groups.add(DELEGATES);
-
-    tp.delegates = new Map();
-    Object.defineProperty(tp, 'knownDelegates', {get: () => tp.delegates.size});
-
-    tp.on(events.HELLO_DUDE, (data, msg, meta) => tp.delegates.set(msg.sender, meta));
-    tp.on(events.I_AM_HERE,  (data, msg, meta) => {
-        tp.delegates.set(msg.sender, meta);
-        tp.send(events.HELLO_DUDE, null, msg.sender);
-    });
-
-    tp.send(events.I_AM_HERE);
-
-    while (tp.knownDelegates < +process.env.DELEGATES) {
-        await waiter.wait(500);
-    }
-
-}).then(async function startClient() {
-
-    require('services/observer');
+exports.attach = function attach() {
 
     tp.on(events.START_ROUND,  exchangeRandoms);
     tp.on(events.VERIFY_BLOCK, blockVerification);
-});
+};
+
+exports.detach = function detach() {
+
+    tp.off(events.START_ROUND,  exchangeRandoms);
+    tp.off(events.VERIFY_BLOCK, blockVerification);
+};
+
+
+
 
 /**
  * Do generate final random number and broadcast it to network using following steps:
@@ -99,7 +75,7 @@ const DELEGATES  = '*';
 async function exchangeRandoms() {
 
     // Let's use this variable as if it existed
-    const numDelegates = tp.knownDelegates || 33;
+    const numDelegates = 1 || 33;
     const myRandomNum  = math.random().toString(10);
 
     // sign message
@@ -110,6 +86,8 @@ async function exchangeRandoms() {
     };
 
     tp.send(events.RND_EVENT, messageWithRandom, DELEGATES);
+
+    console.log('SENDING MY RANDOM', myRandomNum);
 
     const responses        = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
     const responseMessages = responses.map((r) => r.data);
@@ -165,8 +143,13 @@ async function blockVerification({port, block: short}, msg, meta) {
     const block   = JSON.parse(rawData);
 
     if (block && await isValidBlock(block) && isValidBlockProducer(block)) {
+        console.log('streaming block over network');
         return streamBlock(block);
     }
+
+    console.log(!!block, await isValidBlock(block), isValidBlockProducer(block));
+
+    console.log('block is invalid');
 
     // TODO Case when block is invalid.
     return null;
@@ -202,7 +185,7 @@ async function streamBlock(block) {
         signature
     }, DELEGATES);
 
-    const numDelegates     = tp.knownDelegates || 33;
+    const numDelegates     = 1 || 33;
     const responses        = await waiter.waitForAll(events.BLOCK_EVENT, numDelegates, Infinity);
     const responseMessages = responses.map((r) => r.data);
     const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.hashedBlock, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
@@ -259,6 +242,8 @@ function isValidBlockProducer(block, finalRandomNumber) {
 async function isValidBlock(producedBlock) {
     const parentBlock = await chaindata.getLatest();
     const block       = delegate.produceBlock(parentBlock, producedBlock.transactions);
+
+    console.log(block, producedBlock);
 
     return producedBlock.stateRoot === block.stateRoot
         && producedBlock.receiptsRoot === block.receiptsRoot;
