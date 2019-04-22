@@ -23,13 +23,19 @@ const SECRET_KEY = process.env.SECRET_KEY && Buffer.from(process.env.SECRET_KEY,
 const me = module.exports = exports = new Account(SECRET_KEY);
 
 /**
- * Check whether me (account i)
- * @return {[type]} [description]
+ * Check whether me (process account) is delegate
+ *
+ * @return {Promise<Boolean>} Whether account is delegate
  */
 exports.isDelegate = function () {
     return blockchain.isDelegate(me.address.toString('hex'));
 };
 
+/**
+ * Check whether me (process account) is delegate
+ *
+ * @return {Promise<Boolean>} Whether account is block producer
+ */
 exports.isProducer = function () {
-
+    return blockchain.isBlockProducer(me.address.toString('hex'));
 };

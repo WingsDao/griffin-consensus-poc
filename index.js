@@ -27,6 +27,9 @@ const repl = require('repl');
 
 })().then(async function runClient() {
 
+    console.log('PRODUCER?', await me.isProducer());
+    console.log('DELEGATE?', await me.isDelegate());
+
     console.log('Starting observer');
 
     require('services/observer');

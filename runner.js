@@ -59,7 +59,7 @@ const kids = []
     .concat(delegates.map(spawnDelegate))
     .concat(producers.map(spawnProducer));
 
-const bankKiddo = cp.fork('clients/bank.js', ['bank'], {env: Object.assign(env, {SECRET_KEY: bank.secretKey.toString('hex')})});
+// const bankKiddo = cp.fork('clients/bank.js', ['bank'], {env: Object.assign(env, {SECRET_KEY: bank.secretKey.toString('hex')})});
 const repl      = require('repl').start('> ');
 
 repl.context.kids  = kids;
@@ -139,7 +139,7 @@ function spawnProducer(e, i) {
 
 function finish(...args) {
     return console.log('Cleaning up:', args)
-        || bankKiddo.kill()
+        // || bankKiddo.kill()
         || true
         && kids.map((kid) => kid.kill())
         && process.exit(0);

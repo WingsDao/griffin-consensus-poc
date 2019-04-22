@@ -135,12 +135,12 @@ exports.getCertificates = async function getCertificates(address) {
 /**
  * Check if account is a block producer.
  *
- * @param  address             Address of account to check.
+ * @param   {String}            address Address of account to check (without 0x prefix).
  * @returns {Promise.<boolean>}
  */
 exports.isBlockProducer = async function isBlockProducer(address) {
     const latestBlock = await chainData.getLatest();
-    const account     = latestBlock.state.find(account => account.address == address);
+    const account     = latestBlock.state.find((account) => (account.address === address));
 
     return !!account.certificates.length;
 };
