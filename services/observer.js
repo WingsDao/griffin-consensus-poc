@@ -29,10 +29,15 @@ require('core/transport')
             const newBlock = await peer.pullString(meta.address, port);
 
             await chaindata.add(block.number, newBlock);
+
+            // QUESTION: should definition of role happen here? Or we could use same
+            // event in another module/service to attach/detach listeners?
         });
     })
 
     .on(events.NEW_TRANSACTION, function newTx(tx) {
+        // QUESTION: should there be some sort of filter of txs in PoC?
+        // QUESTION: how do we get tx hash and should it be extracted and written into pool here?
         pool.add(tx);
     })
 
@@ -65,12 +70,12 @@ require('core/transport')
     })
 
     .on(events.PING, function areYouLookingForMe(data, msg) {
-        const addr = wallet.getHexAddress();
+        // QUESTION: okay, we have PING event, what's next? How should it be used?
+
+        const addr = wallet.hexAddress;
 
         if (data === addr) {
             this.send(events.PONG, addr, msg.sender);
         }
     })
-
-
 ;

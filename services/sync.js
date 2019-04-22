@@ -34,6 +34,9 @@ exports.pool = async function syncPool() {
     tp.send(events.REQUEST_POOL);
 
     const nodes  = await waiter.waitForAll(events.SHARE_POOL, 10, WAIT_FOR);
+
+    // QUESTION: what principle should lay below sync server choosing?
+    // Currently 'just first' one is taken
     const myNode = nodes.sort((a, b) => a.data - b.data)[0];
 
     if (!myNode) {
@@ -60,8 +63,10 @@ exports.pool = async function syncPool() {
  */
 exports.chain = async function syncChain() {
 
-    tp.send(events.REQUEST_CHAIN, null, '*');
+    tp.send(events.REQUEST_CHAIN);
 
+    // QUESTION: what principle should lay below sync server choosing?
+    // Currently 'just first' one is taken
     const responses  = await waiter.waitForAll(events.SHARE_CHAIN, 10, 3000);
     const oneAndOnly = responses[0];
 

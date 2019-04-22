@@ -33,10 +33,10 @@ describe('Blockchain', () => {
         account  = Account(SECRET_KEY);
         delegate = Account();
 
-        serializedTx = account.tx(delegate.getHexAddress(), 100);
+        serializedTx = account.tx(delegate.hexAddress, 100);
         transactions.push(serializedTx);
 
-        serializedTx = account.vote(delegate.getHexAddress());
+        serializedTx = account.vote(delegate.hexAddress);
         transactions.push(serializedTx);
 
         serializedTx = account.stake(100);
@@ -46,19 +46,19 @@ describe('Blockchain', () => {
     });
 
     it('get account balance', async () => {
-        const balance = await blockchain.getBalance(account.getHexAddress());
+        const balance = await blockchain.getBalance(account.hexAddress);
 
         balance.should.be.a('number');
     });
 
     xit('get account stake', async () => {
-        const stake = await blockchain.getStake(account.getHexAddress());
+        const stake = await blockchain.getStake(account.hexAddress);
 
         stake.should.be.a('number');
     });
 
     it('get account votes', async () => {
-        const votes = await blockchain.getVotesFor(delegate.getHexAddress());
+        const votes = await blockchain.getVotesFor(delegate.hexAddress);
 
         // TODO: finish test
     });
