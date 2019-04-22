@@ -142,7 +142,7 @@ exports.isBlockProducer = async function isBlockProducer(address) {
     const latestBlock = await chainData.getLatest();
     const account     = latestBlock.state.find((account) => (account.address === address));
 
-    return !!account.certificates.length;
+    return !!account && !!account.certificates.length;
 };
 
 /**
