@@ -106,8 +106,11 @@ describe('Blockchain', () => {
     xit('check if account is block producer', async () => {
         const isBlockProducer = await blockchain.isBlockProducer(blockProducers[0].address);
 
+<<<<<<< HEAD
         isBlockProducer.should.be.true;
 
+=======
+>>>>>>> master
         // TODO: TEST
     });
 });

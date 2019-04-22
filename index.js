@@ -8,7 +8,6 @@
 
 process.stdin.resume();
 
-const wait = require('util').promisify(setTimeout);
 const tp   = require('core/transport');
 const sync = require('services/sync');
 const evt  = require('lib/events');

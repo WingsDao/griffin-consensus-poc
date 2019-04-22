@@ -117,6 +117,8 @@ async function isMyRound(frn) {
         return true;
     }
 
+    console.log(block, typeof block);
+
     // get all certificates from latest block
     block.state.forEach((account) => {
         if (activeProducers.includes(account.address)) {

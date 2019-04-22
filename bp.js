@@ -17,7 +17,7 @@ const peer      = require('core/file-peer');
  *
  * @type {Number}
  */
-const TIMEOUT = 5000;
+const TIMEOUT = 1000;
 
 /**
  * Secret key used for testing.
@@ -37,8 +37,6 @@ require('services/observer');
 
     const parentBlock  = await chaindata.getLatest();
     const transactions = await pool.drain();
-
-    console.log(parentBlock.number);
 
     const block = producer.produceBlock(parentBlock, transactions);
 
@@ -69,7 +67,8 @@ require('services/observer');
     ].forEach((tx) => transport.send(events.NEW_TRANSACTION, tx));
 
     return wait(TIMEOUT / 2).then(newTx);
-})();
+
+})().catch(console.error);
 
 async function streamBlock(block) {
     const nodesCount = transport.knownNodes.size - 1;

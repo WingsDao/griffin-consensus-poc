@@ -30,14 +30,13 @@ const GENESIS_PATH = `data/${rb(4).toString('hex')}.json`;
 
 const env = Object.assign({DELEGATES: num, GENESIS_PATH}, process.env);
 
-let delegates = [];
-let producers = [];
+const delegates = [];
+const producers = [];
+const bank      = Account();
 
 const genesis = Genesis();
 
-// const account = Account();
-// producers.push(account);
-// genesis.addProducer(account.address.toString('hex'), 1);
+genesis.addAccount(bank.address.toString('hex'), 1000000);
 
 for (let i = 0; i < num; i++) {
     const account = Account();
@@ -60,8 +59,8 @@ const kids = []
     .concat(delegates.map(spawnDelegate))
     .concat(producers.map(spawnProducer));
 
-// const producer = cp.fork('clients/block-producer.js', ['bp'], {env: Object.assign(env, {SECRET_KEY: producers[0].secretKey.toString('hex')})});
-const repl     = require('repl').start('> ');
+const bankKiddo = cp.fork('clients/bank.js', ['bank'], {env: Object.assign(env, {SECRET_KEY: bank.secretKey.toString('hex')})});
+const repl      = require('repl').start('> ');
 
 repl.context.kids  = kids;
 repl.context.tp    = tp;
@@ -73,8 +72,8 @@ tp.on(evt.PONG, (data) => console.log('Yup, dude, %s', data));
 tp.delegates = new Map();
 tp.on(evt.I_AM_HERE, (data, msg) => tp.delegates.set(msg.sender, msg));
 
-console.log('DELEGATES:') || delegates.map((e) => console.log('-', '0x' + e.address.toString('hex')));
-console.log('PRODUCERS:') || producers.map((e) => console.log('-', '0x' + e.address.toString('hex')));
+console.log('DELEGATES:') || delegates.map((e) => console.log('-', e.getHexAddress()));
+console.log('PRODUCERS:') || producers.map((e) => console.log('-', e.getHexAddress()));
 
 tp.on(evt.START_ROUND, function () {
     tp.once(evt.NEW_BLOCK, function ({block}) {
@@ -140,7 +139,7 @@ function spawnProducer(e, i) {
 
 function finish(...args) {
     return console.log('Cleaning up:', args)
-        // || producer.kill()
+        || bankKiddo.kill()
         || true
         && kids.map((kid) => kid.kill())
         && process.exit(0);
