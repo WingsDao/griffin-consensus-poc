@@ -358,6 +358,9 @@ async function getAccount(address, block) {
 /**
  * Get all delegates sorted by their votes.
  *
+ * TODO: Update this method to match Map in getRawDelegates()
+ * TODO: Redesign this and active/successor methods to match Map type as well
+ *
  * @returns {Promise.<Object[]>|Object[]} Delegates array.
  */
 async function getDelegates() {

@@ -92,6 +92,8 @@ describe('Blockchain', () => {
     });
 
     it('check if account is delegate', async () => {
+        console.log(delegates[0])
+
         const isDelegate = await blockchain.isDelegate(delegates[0]);
 
         isDelegate.should.be.true;
@@ -106,11 +108,6 @@ describe('Blockchain', () => {
     xit('check if account is block producer', async () => {
         const isBlockProducer = await blockchain.isBlockProducer(blockProducers[0].address);
 
-<<<<<<< HEAD
         isBlockProducer.should.be.true;
-
-=======
->>>>>>> master
-        // TODO: TEST
     });
 });
