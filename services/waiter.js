@@ -7,9 +7,59 @@
 const msg  = require('core/transport');
 const wait = require('util').promisify(setTimeout);
 
-exports.wait       = wait;
-exports.waitFor    = waitFor;
-exports.waitForAll = waitForAll;
+exports.wait        = wait;
+exports.collect     = collect;
+exports.waitFor     = waitFor;
+exports.waitForAll  = waitForAll;
+exports.waitForCond = waitForCond;
+
+/**
+ * Collect as many events as possible in 'wait' amount of time.
+ *
+ * @param  {String}  evt         Name of the event to collect.
+ * @param  {Number}  [wait=1000] Number of milliseconds to collect
+ * @return {Promise}             Promise with collected data
+ */
+async function collect(evt, wait = 1000) {
+    const result = [];
+
+    return new Promise((resolve) => {
+
+        msg.on(evt, listener);
+
+        setTimeout(function success() {
+            msg.off(evt, listener);
+            resolve(result);
+        }, wait);
+
+        function listener(data, msg, meta) {
+            result.push({data, msg, meta});
+        }
+    });
+}
+
+/**
+ * Listen to specific event and apply callback to it.
+ * When cb(data, msg, meta) returns 'truthy value' resolve Promise with that data.
+ *
+ * @param  {String}   evt         Event to listen to and whose results to filter
+ * @param  {Function} cb          Callback to check results
+ * @param  {Number}   [wait=1000] Number of milliseconds to wait
+ * @return {Promise}              Promise with result when cb returned true or null when timeout reached
+ */
+async function waitForCond(evt, cb, wait = 1000) {
+    return new Promise(async function (resolve) {
+
+        function listener(data, msg, meta) {
+            if (cb(data, msg, meta)) {
+                msg.off(evt, listener);
+                resolve(data, msg, meta);
+            }
+        }
+
+        setTimeout(() => msg.off(evt, listener) && resolve(null), wait);
+    });
+}
 
 /**
  * Wait for N number of emitted events or for K milliseconds.
@@ -25,7 +75,7 @@ async function waitForAll(evt, count = 1, wait = 1000) {
     const finite = (wait !== Infinity);
 
     return new Promise((resolve) => {
-        const success = () => { msg.removeListener(evt, listener); resolve(result); };
+        const success = () => { msg.off(evt, listener); resolve(result); };
 
         function listener(data, msg, meta) {
             (result.push({data, msg, meta}) === count) && success();
