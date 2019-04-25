@@ -1,0 +1,60 @@
+# Include extends for gitlab-ci
+include: 'https://raw.githubusercontent.com/WingsDao/gitlab-ci/master/templates/.extends.yml'
+
+stages:
+  - script
+  - test
+  - build
+  - update
+  - deploy
+  - notify
+
+
+Script:
+  stage: script
+  image: ${REGISTRY_URL}/devops/gitlab-runner:latest
+  script:
+    - cp /usr/local/bin/github-status.py ./
+    - echo "Copy scripts for next stages"
+  artifacts:
+    expire_in: 1h
+    paths:
+      - github-status.py
+
+#ESLint:
+#  stage: test
+#  image: node:10-alpine
+#  script:
+#    - npm i -g eslint
+#    - eslint app cli lib test
+
+Test:
+  stage: test
+  image: node:10
+  cache:
+    key: $CI_COMMIT_REF_NAME
+    paths:
+      - node_modules/
+  script:
+    - apt-get update && apt-get install -y python3-requests
+    - ./github-status.py -s 'pending' -d 'Tests from the developers...'
+    - npm ci
+    - npm test
+    - ./github-status.py -s 'success' -d 'Tests completed successfully....'
+  dependencies:
+    - Script
+
+#Build:
+#  extends: .only-repo
+#  stage: build
+#  script:
+#    - docker login -u ${REGISTRY_USER} -p ${REGISTRY_PWD} ${REGISTRY_URL}
+#
+#    # Docker container for (parser)
+#    - docker build
+#        -f ./.build/Dockerfile
+#        -t ${CONTAINER_FULLNAME}:${CONTAINER_TAG} .
+#    - docker push ${CONTAINER_FULLNAME}:${CONTAINER_TAG}
+
+telegram-notify:
+  extends: .telegram-notify
