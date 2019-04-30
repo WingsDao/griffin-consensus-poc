@@ -16,6 +16,8 @@ const waiter     = require('services/waiter');
 const peer       = require('core/file-peer');
 const delegate   = require('services/wallet');
 
+const conf = require('lib/constants');
+
 // NOTE Random number distribution.
 //
 // 1. When random number is generated
@@ -38,20 +40,35 @@ const delegate   = require('services/wallet');
  */
 const DELEGATES  = '*';
 
+// /**
+//  * Total number of responses to await.
+//  * @type {Number}
+//  */
+// const DELEGATES_COUNT = conf.ACTIVE_DELEGATES_COUNT + conf.ACTIVE_SUCCESSOR_DELEGATES_COUNT - 1;
+
+/**
+ * Number of ms to wait to receive other delegates' randoms.
+ * @type {Number}
+ */
+const WAIT_TIME = conf.DELEGATE_WAIT_TIME || 3000;
+
+/**
+ * Attach event listeners to current transport.
+ */
 exports.attach = function attach() {
 
     tp.on(events.START_ROUND,  exchangeRandoms);
     tp.on(events.VERIFY_BLOCK, blockVerification);
 };
 
+/**
+ * Detach event listeners from current transport.
+ */
 exports.detach = function detach() {
 
     tp.off(events.START_ROUND,  exchangeRandoms);
     tp.off(events.VERIFY_BLOCK, blockVerification);
 };
-
-
-
 
 /**
  * Do generate final random number and broadcast it to network using following steps:
@@ -89,10 +106,10 @@ async function exchangeRandoms() {
 
     console.log('SENDING MY RANDOM', myRandomNum);
 
-    const responses        = await waiter.waitForAll(events.RND_EVENT, numDelegates, Infinity);
+    const responses        = await waiter.collect(events.RND_EVENT, WAIT_TIME);
     const responseMessages = responses.map((r) => r.data);
-    const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
-    const randomNumbers    = verifiedMessages.map(msg => +msg.random);
+    const verifiedMessages = responseMessages.filter((msg) => Delegate.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+    const randomNumbers    = verifiedMessages.map((msg) => +msg.random);
 
     const finalRandomNum   = math.finalRandom(randomNumbers);
 
@@ -116,6 +133,10 @@ async function exchangeRandoms() {
     }
 
     console.log('ROUND UNSUCCESSFUL: ', mostCommon.count, parseInt(numDelegates / 2));
+
+    // QUESTION: what should we do programmatically when round is unsucceful?
+    // I mean should we restart everything? Or only this function? Consensus to re-roll
+    // has to be reached somehow. Think about it
 
     return waiter.wait(2000).then(exchangeRandoms);
 }
@@ -242,8 +263,23 @@ function isValidBlockProducer(block, finalRandomNumber) {
 async function isValidBlock(producedBlock) {
     const parentBlock = await chaindata.getLatest();
     const block       = delegate.produceBlock(parentBlock, producedBlock.transactions);
+    const oneMore     = delegate.produceBlock(parentBlock, producedBlock.transactions);
 
-    console.log(block, producedBlock);
+    console.log('STATE', producedBlock.stateRoot    === block.stateRoot, producedBlock.stateRoot, block.stateRoot);
+    console.log('RECEIPTS', producedBlock.receiptsRoot === block.receiptsRoot, block.receiptsRoot, block.receiptsRoot);
+
+    console.log('---------');
+    console.log('---------');
+    console.log('---------');
+    console.log(producedBlock.state);
+    console.log('---------');
+    console.log(block.state);
+    console.log('---------');
+    console.log(oneMore.state);
+    console.log('---------');
+    console.log('---------');
+    console.log('---------');
+    console.log(producedBlock);
 
     return producedBlock.stateRoot === block.stateRoot
         && producedBlock.receiptsRoot === block.receiptsRoot;

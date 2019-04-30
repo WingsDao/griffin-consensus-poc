@@ -19,7 +19,13 @@ const Account = require('core/account');
  *
  * @type {Number}
  */
-const DELEGATE_BALANCE = 100;
+const DELEGATE_BALANCE = 100000000;
+
+/**
+ * Initial staked amount for block producers.
+ * @type {Number}
+ */
+const STAKED_AMOUNT = 100;
 
 /**
  * Path to genesis file.
@@ -36,14 +42,14 @@ const bank      = Account();
 
 const genesis = Genesis();
 
-genesis.addAccount(bank.address.toString('hex'), 1000000);
+genesis.addAccount(bank.hexAddress, 1000000);
 
 for (let i = 0; i < num; i++) {
     const account = Account();
 
     delegates.push(account);
-    genesis.addDelegate(account.address.toString('hex'), DELEGATE_BALANCE);
-    genesis.addProducer(account.address.toString('hex'), 1);
+    genesis.addDelegate(account.hexAddress, DELEGATE_BALANCE);
+    genesis.addProducer(account.hexAddress, STAKED_AMOUNT);
 }
 
 // for (let i = 0; i < num; i++) {

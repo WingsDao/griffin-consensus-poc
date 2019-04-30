@@ -18,7 +18,7 @@ const genesis    = require('genesis');
  */
 const SECRET_KEY  = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c3b9f489f7085cb50', 'hex');
 
-describe('Blockchain', () => {
+xdescribe('Blockchain', () => {
     let account        = {};
     let delegate       = {};
     let delegates      = [];

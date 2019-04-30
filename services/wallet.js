@@ -9,8 +9,9 @@
 
 'use strict';
 
-const Account    = require('core/account');
-const blockchain = require('core/blockchain');
+const Account = require('core/account');
+const chain   = require('core/db').chain;
+const state   = require('lib/block-state');
 
 /**
  * Secret key parsed from ENV when provided.
@@ -28,7 +29,7 @@ const me = module.exports = exports = new Account(SECRET_KEY);
  * @return {Promise<Boolean>} Whether account is delegate
  */
 exports.isDelegate = function () {
-    return blockchain.isDelegate(me.address.toString('hex'));
+    return chain.getLatest().then((block) => console.log(block.state) || state.isDelegate(block.state, me.hexAddress));
 };
 
 /**
@@ -37,5 +38,5 @@ exports.isDelegate = function () {
  * @return {Promise<Boolean>} Whether account is block producer
  */
 exports.isProducer = function () {
-    return blockchain.isBlockProducer(me.address.toString('hex'));
+    return chain.getLatest().then((block) => console.log(block.state) || state.isBlockProducer(block.state, me.hexAddress));
 };

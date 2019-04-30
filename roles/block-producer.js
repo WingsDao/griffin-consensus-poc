@@ -110,14 +110,12 @@ async function isMyRound(frn) {
     const block               = await chaindata.getLatest();
     const orderedCertificates = [];
 
-    if (block.number === 0) {
+    if (block.number === 0 || true) {
         // TODO First round scenario.
         // Next line causes EventEmitter memory leak.
         // Object.assign(block, blockchain.initiateGenesisState(block, {state: []}));
         return true;
     }
-
-    console.log(block, typeof block);
 
     // get all certificates from latest block
     block.state.forEach((account) => {

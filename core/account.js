@@ -169,9 +169,9 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
         const serializedTx = block.transactions[txIndex];
         const tx           = helpers.toTxObject(serializedTx);
-        const sender       = block.state.find(account => account.address === tx.from);
+        const sender       = block.state.find(account => account.address === tx.from.slice(2));
 
-        if (!sender) { throw 'Sender account doesn\'t exist'; }
+        if (!sender) { console.log('Sender account doesn\'t exist'); continue; }
 
         block = blockchain.handleTransaction(tx, block);
 
