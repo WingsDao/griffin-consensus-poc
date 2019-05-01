@@ -6,14 +6,15 @@
 
 'use strict';
 
-const math          = require('lib/math');
-const events        = require('lib/events');
-const pool          = require('core/db').pool;
-const tp            = require('core/transport');
-const chaindata     = require('core/db').chain;
-const peer          = require('core/file-peer');
-const waiter        = require('services/waiter');
-const blockProducer = require('services/wallet');
+const math       = require('lib/math');
+const events     = require('lib/events');
+const pool       = require('core/db').pool;
+const tp         = require('core/transport');
+const chaindata  = require('core/db').chain;
+const peer       = require('core/file-peer');
+const waiter     = require('services/waiter');
+const parseState = require('lib/block-state');
+const me         = require('services/wallet');
 
 exports.attach = function attach() {
 
@@ -59,7 +60,7 @@ async function waitAndProduce() {
     // Drain a pool and create new block
     const parentBlock  = await chaindata.getLatest();
     const transactions = await pool.drain().catch(console.error);
-    const block        = blockProducer.produceBlock(parentBlock, transactions);
+    const block        = me.produceBlock(parentBlock, transactions);
 
     block.randomNumber = random;
 
@@ -105,32 +106,12 @@ async function waitAndProduce() {
  * @return {Promise<Boolean>}     Whether current account was chosen as a BP or not.
  */
 async function isMyRound(frn) {
-    // TODO Get real array of active block producers.
-    const activeProducers     = [blockProducer.address.toString('hex')];
-    const block               = await chaindata.getLatest();
-    const orderedCertificates = [];
+    const block     = await chaindata.getLatest();
+    const state     = parseState(block.state);
+    const producers = state.blockProducers;
 
-    if (block.number === 0 || true) {
-        // TODO First round scenario.
-        // Next line causes EventEmitter memory leak.
-        // Object.assign(block, blockchain.initiateGenesisState(block, {state: []}));
-        return true;
-    }
+    const index    = math.findCertificateIndex(frn, producers.length);
+    const chosenBp = producers[index];
 
-    // get all certificates from latest block
-    block.state.forEach((account) => {
-        if (activeProducers.includes(account.address)) {
-            orderedCertificates.push(...account.certificates);
-        }
-    });
-
-    const index      = math.findCertificateIndex(frn, orderedCertificates.length);
-    const chosenCert = orderedCertificates[index];
-    const chosenBp   = block.state.find(el => el.certificates.includes(chosenCert));
-
-    console.log('PERC, FRN, TOTAL', index, frn, orderedCertificates.length);
-    console.log('CHOSEN', chosenBp);
-    console.log('MY IS', blockProducer.address.toString('hex'));
-
-    return (chosenBp.address === blockProducer.address.toString('hex'));
+    return (chosenBp === me.hexAddress);
 }

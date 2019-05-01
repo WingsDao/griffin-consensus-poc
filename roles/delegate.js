@@ -9,7 +9,7 @@
 const keccak256  = require('keccak256');
 const math       = require('lib/math');
 const events     = require('lib/events');
-const Delegate   = require('core/account');
+const Account    = require('core/account');
 const tp         = require('core/transport');
 const chain      = require('core/db').chain;
 const waiter     = require('services/waiter');
@@ -96,7 +96,7 @@ async function exchangeRandoms() {
     const state        = parseState(currentBlock.state);
 
     // Get list of delegates from state
-    // const delegates    = state.delegates;
+    const delegates    = state.delegates;
 
     // Let's use this variable as if it existed
     const numDelegates = 1 || 33;
@@ -104,7 +104,7 @@ async function exchangeRandoms() {
 
     // sign message
     const messageWithRandom = {
-        me:        me.hexAddress,
+        sender:    me.hexAddress,
         random:    myRandomNum,
         publicKey: me.publicKey.toString('hex'),
         signature: me.signMessage(myRandomNum).toString('hex')
@@ -116,7 +116,10 @@ async function exchangeRandoms() {
 
     const responses        = await waiter.collect(events.RND_EVENT, WAIT_TIME);
     const responseMessages = responses.map((r) => r.data);
-    const verifiedMessages = responseMessages.filter((msg) => Delegate.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+    const verifiedMessages = responseMessages
+        .filter((msg) => delegates.includes(msg.sender))
+        .filter((msg) => Account.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+
     const randomNumbers    = verifiedMessages.map((msg) => +msg.random);
 
     const finalRandomNum   = math.finalRandom(randomNumbers);
@@ -217,7 +220,7 @@ async function streamBlock(block) {
     const numDelegates     = 1 || 33;
     const responses        = await waiter.waitForAll(events.BLOCK_EVENT, numDelegates, Infinity);
     const responseMessages = responses.map((r) => r.data);
-    const verifiedMessages = responseMessages.filter(msg => Delegate.verifyMessage(msg.hashedBlock, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+    const verifiedMessages = responseMessages.filter(msg => Account.verifyMessage(msg.hashedBlock, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
     const verifiedBlocks   = verifiedMessages.map(msg => msg.hashedBlock);
 
     console.log('Verified blocks:', verifiedBlocks);
