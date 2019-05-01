@@ -11,10 +11,11 @@ const math       = require('lib/math');
 const events     = require('lib/events');
 const Delegate   = require('core/account');
 const tp         = require('core/transport');
-const chaindata  = require('core/db').chain;
+const chain      = require('core/db').chain;
 const waiter     = require('services/waiter');
 const peer       = require('core/file-peer');
-const delegate   = require('services/wallet');
+const parseState = require('lib/block-state');
+const me         = require('services/wallet');
 
 const conf = require('lib/constants');
 
@@ -91,15 +92,22 @@ exports.detach = function detach() {
  */
 async function exchangeRandoms() {
 
+    const currentBlock = await chain.getLatest();
+    const state        = parseState(currentBlock.state);
+
+    // Get list of delegates from state
+    // const delegates    = state.delegates;
+
     // Let's use this variable as if it existed
     const numDelegates = 1 || 33;
     const myRandomNum  = math.random().toString(10);
 
     // sign message
     const messageWithRandom = {
+        me:        me.hexAddress,
         random:    myRandomNum,
-        publicKey: delegate.publicKey.toString('hex'),
-        signature: delegate.signMessage(myRandomNum).toString('hex')
+        publicKey: me.publicKey.toString('hex'),
+        signature: me.signMessage(myRandomNum).toString('hex')
     };
 
     tp.send(events.RND_EVENT, messageWithRandom, DELEGATES);
@@ -197,12 +205,12 @@ async function streamBlock(block) {
     const {port, promise} = peer.peerString(block, nodesCount);
 
     const hashedBlock = keccak256(JSON.stringify(block)).toString('hex');
-    const signature   = delegate.signMessage(hashedBlock).toString('hex');
+    const signature   = me.signMessage(hashedBlock).toString('hex');
 
     tp.send(events.BLOCK_EVENT, {
         port,
         hashedBlock,
-        publicKey: delegate.publicKey.toString('hex'),
+        publicKey: me.publicKey.toString('hex'),
         signature
     }, DELEGATES);
 
@@ -228,7 +236,7 @@ async function streamBlock(block) {
             random:     block.randomNumber,
             producer:   block.producer
         },
-        publicKey: delegate.publicKey.toString('hex'),
+        publicKey: me.publicKey.toString('hex'),
         signature
     });
 
@@ -261,25 +269,8 @@ function isValidBlockProducer(block, finalRandomNumber) {
  * @return {Promise<Boolean>}               Whether block is valid or not.
  */
 async function isValidBlock(producedBlock) {
-    const parentBlock = await chaindata.getLatest();
-    const block       = delegate.produceBlock(parentBlock, producedBlock.transactions);
-    const oneMore     = delegate.produceBlock(parentBlock, producedBlock.transactions);
-
-    console.log('STATE', producedBlock.stateRoot    === block.stateRoot, producedBlock.stateRoot, block.stateRoot);
-    console.log('RECEIPTS', producedBlock.receiptsRoot === block.receiptsRoot, block.receiptsRoot, block.receiptsRoot);
-
-    console.log('---------');
-    console.log('---------');
-    console.log('---------');
-    console.log(producedBlock.state);
-    console.log('---------');
-    console.log(block.state);
-    console.log('---------');
-    console.log(oneMore.state);
-    console.log('---------');
-    console.log('---------');
-    console.log('---------');
-    console.log(producedBlock);
+    const parentBlock = await chain.getLatest();
+    const block       = me.produceBlock(parentBlock, producedBlock.transactions);
 
     return producedBlock.stateRoot === block.stateRoot
         && producedBlock.receiptsRoot === block.receiptsRoot;
