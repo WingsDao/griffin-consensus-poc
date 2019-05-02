@@ -104,7 +104,6 @@ async function exchangeRandoms() {
 
     // sign message
     const messageWithRandom = {
-        sender:    me.hexAddress,
         random:    myRandomNum,
         publicKey: me.publicKey.toString('hex'),
         signature: me.signMessage(myRandomNum).toString('hex')
@@ -116,8 +115,11 @@ async function exchangeRandoms() {
 
     const responses        = await waiter.collect(events.RND_EVENT, WAIT_TIME);
     const responseMessages = responses.map((r) => r.data);
+
+    responseMessages.forEach((msg) => console.log(Account.publicKeyToAddress(msg.publicKey)));
+
     const verifiedMessages = responseMessages
-        .filter((msg) => delegates.includes(msg.sender))
+        .filter((msg) => delegates.includes(Account.publicKeyToAddress(msg.publicKey)))
         .filter((msg) => Account.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
 
     const randomNumbers    = verifiedMessages.map((msg) => +msg.random);

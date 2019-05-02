@@ -62,11 +62,11 @@ async function waitAndProduce() {
     const transactions = await pool.drain().catch(console.error);
     const block        = me.produceBlock(parentBlock, transactions);
 
-    block.randomNumber = random;
+    block.randomNumber = random.data;
 
     // Share block with delegates
     // TODO: think of verification: do it in UDP short block or HTTP or both
-    const {port} = peer.peerString(block, );
+    const {port} = peer.peerString(block, tp.knownNodes, 5000);
 
     // Send event so delegates know where to get block
     tp.send(events.VERIFY_BLOCK, {
@@ -103,7 +103,7 @@ async function waitAndProduce() {
  * happen frequently.
  *
  * @param  {Number}           frn Final Random Number.
- * @return {Promise<Boolean>}     Whether current account was chosen as a BP or not.
+ * @return {Promise<Boolean>}     Whether current account is a BP in current block or not.
  */
 async function isMyRound(frn) {
     const block     = await chaindata.getLatest();

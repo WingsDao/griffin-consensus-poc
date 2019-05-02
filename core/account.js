@@ -51,6 +51,48 @@ function Account(secretKey) {
 }
 
 /**
+ * Signing message by account private key.
+ *
+ * @param  {String} message Text message to sign.
+ * @return {Buffer}         Signature of message.
+ */
+Account.prototype.signMessage = function signMessage(message) {
+    const hash = keccak256(Buffer.from(message));
+
+    return secp256k1.sign(hash, this.secretKey).signature;
+};
+
+/**
+ * Verifying message signed by account.
+ *
+ * @param  {String}  message   Message to verify.
+ * @param  {Buffer}  publicKey Public key of account that signed message.
+ * @param  {Buffer}  signature Signature of message.
+ * @return {Boolean}           Result of signature verification.
+ */
+Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
+    const hash = keccak256(Buffer.from(message));
+
+    return secp256k1.verify(hash, signature, Buffer.concat([SECP256K1_PREFIX, publicKey]));
+};
+
+/**
+ * Hashes publicKey with keccak256 and gets matching address. Adds 0x prefix!
+ *
+ * @param  {Buffer|String} publicKey      Public key as Buffer or 'hex' encoded String
+ * @param  {String}        [encoding=hex] Optional encoding of publicKey when pk is String
+ * @return {String}                       0x-prefixed address
+ */
+Account.publicKeyToAddress = function publicKeyToAddress(publicKey, encoding) {
+
+    if (publicKey.constructor !== Buffer) {
+        publicKey = Buffer.from(publicKey, encoding || 'hex');
+    }
+
+    return '0x' + keccak256(publicKey).slice(12).toString('hex');
+};
+
+/**
  * Creates new serialized signed transaction.
  *
  * @example
@@ -94,32 +136,6 @@ Object.defineProperty(Account.prototype, 'hexAddress', {
  */
 Account.prototype.getHexAddress = function getHexAddress() {
     return '0x' + this.address.toString('hex');
-};
-
-/**
- * Signing message by account private key.
- *
- * @param  {String} message Text message to sign.
- * @return {Buffer}         Signature of message.
- */
-Account.prototype.signMessage = function signMessage(message) {
-    const hash = keccak256(Buffer.from(message));
-
-    return secp256k1.sign(hash, this.secretKey).signature;
-};
-
-/**
- * Verifying message signed by account.
- *
- * @param  {String}  message   Message to verify.
- * @param  {Buffer}  publicKey Public key of account that signed message.
- * @param  {Buffer}  signature Signature of message.
- * @return {Boolean}           Result of signature verification.
- */
-Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
-    const hash = keccak256(Buffer.from(message));
-
-    return secp256k1.verify(hash, signature, Buffer.concat([SECP256K1_PREFIX, publicKey]));
 };
 
 /**
