@@ -92,6 +92,7 @@ exports.detach = function detach() {
  */
 async function exchangeRandoms() {
 
+    // Get current block first
     const currentBlock = await chain.getLatest();
     const state        = parseState(currentBlock.state);
 
@@ -131,9 +132,6 @@ async function exchangeRandoms() {
     // Do the math
     const finalRandomNum = math.finalRandom(randomNumbers);
 
-    console.log('RANDOMS: ', randomNumbers);
-    console.log('MY FINAL RANDOM IS: ', finalRandomNum);
-
     tp.send(events.FRND_EVENT, finalRandomNum, DELEGATES);
 
     const finalResponses = await waiter.collect(events.FRND_EVENT, 1000);
@@ -143,19 +141,21 @@ async function exchangeRandoms() {
     const mostCommon = resolution[0];
 
     console.log('MOST COMMON IS: ', mostCommon);
+    console.log('OTHER RESULTS: ', resolution);
 
-    if (mostCommon.count > Math.floor(resolution.length / 2)) {
-        console.log('ROUND SUCCESSFUL, SENDING VALUE TO BP: %s', mostCommon.value);
-        return tp.send(events.BP_CATCH_IT, mostCommon.value, '*');
+    if (mostCommon.count <= Math.floor(finalResponses.length / 2)) {
+
+        // QUESTION: what should we do programmatically when round is unsucceful?
+        // I mean should we restart everything? Or only this function? Consensus to re-roll
+        // has to be reached somehow. Think about it
+
+        console.log('ROUND UNSUCCESSFUL: ', mostCommon.count, parseInt(numDelegates / 2));
+        return waiter.wait(2000).then(exchangeRandoms);
     }
 
-    console.log('ROUND UNSUCCESSFUL: ', mostCommon.count, parseInt(numDelegates / 2));
+    console.log('ROUND SUCCESSFUL, SENDING VALUE TO BP: %s', mostCommon.value);
 
-    // QUESTION: what should we do programmatically when round is unsucceful?
-    // I mean should we restart everything? Or only this function? Consensus to re-roll
-    // has to be reached somehow. Think about it
-
-    return waiter.wait(2000).then(exchangeRandoms);
+    return tp.send(events.BP_CATCH_IT, mostCommon.value, '*');
 }
 
 /**
@@ -185,9 +185,7 @@ async function blockVerification({port, block: short}, msg, meta) {
         return streamBlock(block);
     }
 
-    console.log(!!block, await isValidBlock(block), isValidBlockProducer(block));
-
-    console.log('block is invalid');
+    console.log('block is invalid', !!block, await isValidBlock(block), isValidBlockProducer(block));
 
     // TODO Case when block is invalid.
     return null;
@@ -264,6 +262,8 @@ async function streamBlock(block) {
  */
 function isValidBlockProducer(block, finalRandomNumber) {
     // return (block.producer === blockchain.getBlockProducer(block, finalRandomNumber));
+
+
 
     finalRandomNumber;
     block;

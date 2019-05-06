@@ -37,6 +37,10 @@ exports.detach = function detach() {
  */
 async function waitAndProduce() {
 
+    // Get current block first
+    const currentBlock = await chaindata.getLatest();
+    const state        = parseState(currentBlock.state);
+
     // This event can take forever.
     // TODO: think of time limitation for this part.
     // In async architecture it's also possible that BP will catch same events from different
@@ -50,7 +54,7 @@ async function waitAndProduce() {
     // We may want every bp to produce block every round.
     // TODO: remember about backup block producer, as he have to produce as well in order to get block reward.
     // FIXME Supply real FRN.
-    const isProducer = await isMyRound(random.data);
+    const isProducer = me.hexAddress === math.findProducer(random.data, state.blockProducers);
 
     if (!isProducer) {
         console.log('I AM NO PRODUCER');
@@ -60,9 +64,8 @@ async function waitAndProduce() {
     console.log('I AM PRODUCER %s %s', random.data, me.hexAddress);
 
     // Drain a pool and create new block
-    const parentBlock  = await chaindata.getLatest();
     const transactions = await pool.drain().catch(console.error);
-    const block        = me.produceBlock(parentBlock, transactions);
+    const block        = me.produceBlock(currentBlock, transactions);
 
     // Assign random number to newly produced block
     block.randomNumber = random.data;
@@ -84,40 +87,4 @@ async function waitAndProduce() {
     });
 
     return promise;
-}
-
-/**
- * Get current state.
- *
- * QUESTION Which scenario to choose?
- *
- * Scenario 1.
- * We take FRN and take its percent from the total number of certificates
- * and select one certificate at the same percentage from an array of certificates
- * of online BPs.
- *
- * Cons:
- * If list of BP changes dynamically this algorithm cannot be considered stable.
- *
- * Scenario 2.
- * FRN is being generated in the range of certificates from the
- * previous block. FRN generation occurs until selected
- * certificate corresponds to one of online BPs.
- *
- * Cons:
- * Many iterations. This works good when network is active or iterations
- * happen frequently.
- *
- * @param  {Number}           frn Final Random Number.
- * @return {Promise<Boolean>}     Whether current account is a BP in current block or not.
- */
-async function isMyRound(frn) {
-    const block     = await chaindata.getLatest();
-    const state     = parseState(block.state);
-    const producers = state.blockProducers;
-
-    const index    = math.findCertificateIndex(frn, producers.length);
-    const chosenBp = producers[index];
-
-    return (chosenBp === me.hexAddress);
 }
