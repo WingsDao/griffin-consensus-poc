@@ -57,20 +57,24 @@ async function waitAndProduce() {
         return;
     }
 
+    console.log('I AM PRODUCER %s %s', random.data, me.hexAddress);
+
     // Drain a pool and create new block
     const parentBlock  = await chaindata.getLatest();
     const transactions = await pool.drain().catch(console.error);
     const block        = me.produceBlock(parentBlock, transactions);
 
+    // Assign random number to newly produced block
     block.randomNumber = random.data;
 
     // Share block with delegates
     // TODO: think of verification: do it in UDP short block or HTTP or both
-    const {port} = peer.peerString(block, tp.knownNodes, 5000);
+    const {port, promise} = peer.peerString(block, tp.knownNodes, 5000);
 
     // Send event so delegates know where to get block
     tp.send(events.VERIFY_BLOCK, {
-        port, block: {
+        port,
+        block: {
             number:     block.number,
             hash:       block.hash,
             parentHash: block.parentHash,
@@ -78,6 +82,8 @@ async function waitAndProduce() {
             producer:   block.producer
         }
     });
+
+    return promise;
 }
 
 /**

@@ -8,32 +8,41 @@
 
 process.stdin.resume();
 
-const tp   = require('core/transport');
-const sync = require('services/sync');
-const evt  = require('lib/events');
-const me   = require('services/wallet');
-const repl = require('repl');
+const tp       = require('core/transport');
+const sync     = require('services/sync');
+const evt      = require('lib/events');
+const me       = require('services/wallet');
+const chain    = require('core/db').chain;
+const repl     = require('repl');
+const observer = require('services/observer');
 
 (async function initServices() {
 
-    // More than one node in network
-    if (tp.knownNodes.size > 1) {
-
-        await Promise.all([
-            // sync.chain(),
-            sync.pool()
-        ]).catch(console.error);
-    }
+    // First of all sync data from existing node
+    await Promise.all([
+        sync.chain(),
+        sync.pool()
+    ]).catch(console.error);
 
 })().then(async function runClient() {
 
-    console.log('Starting observer');
+    const lastBlock = await chain.getLatest();
 
-    require('services/observer');
+    console.log('Last block is %d', lastBlock.number);
+    console.log('My address is %s', me.hexAddress);
+
+    observer.observe();
 
     // Attach both roles by default
-    require('roles/block-producer').attach();
-    require('roles/delegate').attach();
+
+    const isDelegate = await me.isDelegate();
+    const isProducer = await me.isProducer();
+
+    console.log('Delegate: %s', isDelegate);
+    console.log('Producer: %s', isProducer);
+
+    isDelegate && require('roles/delegate').attach();
+    isProducer && require('roles/block-producer').attach();
 
     console.log('Starting prompt...');
 

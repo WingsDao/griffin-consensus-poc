@@ -29,7 +29,7 @@ const me = module.exports = exports = new Account(SECRET_KEY);
  * @return {Promise<Boolean>} Whether account is delegate
  */
 exports.isDelegate = function () {
-    return chain.getLatest().then((block) => console.log(block.state) || state.isDelegate(block.state, me.hexAddress));
+    return chain.getLatest().then((block) => state.isDelegate(block.state, me.hexAddress));
 };
 
 /**
@@ -38,5 +38,5 @@ exports.isDelegate = function () {
  * @return {Promise<Boolean>} Whether account is block producer
  */
 exports.isProducer = function () {
-    return chain.getLatest().then((block) => console.log(block.state) || state.isBlockProducer(block.state, me.hexAddress));
+    return chain.getLatest().then((block) => state.isBlockProducer(block.state, me.hexAddress));
 };

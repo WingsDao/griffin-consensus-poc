@@ -172,12 +172,13 @@ class Chain extends DB {
      * @return {stream.Writable} Writable stream
      */
     createWriteStream() {
+        const db          = this.db;
         const writeStream = new stream.Writable({
             write(chunk, encoding, cb) {
                 const string = chunk.toString();
                 const number = JSON.parse(string).number;
 
-                return this.db.put(number, string).then(() => cb(null, string));
+                return db.put(number, string).then(() => cb(null, string));
             }
         });
 

@@ -118,29 +118,33 @@ async function exchangeRandoms() {
 
     responseMessages.forEach((msg) => console.log(Account.publicKeyToAddress(msg.publicKey)));
 
-    const verifiedMessages = responseMessages
+    const randomNumbers = responseMessages
         .filter((msg) => delegates.includes(Account.publicKeyToAddress(msg.publicKey)))
-        .filter((msg) => Account.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+        .filter((msg) => Account.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')))
+        .map((msg)    => +msg.random);
 
-    const randomNumbers    = verifiedMessages.map((msg) => +msg.random);
+    // QUESTION: What should we do when number of ACTIVE_DELEGATES has not been reached?
+    // QUESTION: How do we sort delegates and fill missing from successors?
+    // QUESTION: How to test setups when there's only runner X count? We'd have to run some test-ready setting.
+    // if (randomNumbers.length < conf.ACTIVE_DELEGATES_COUNT) { }
 
-    const finalRandomNum   = math.finalRandom(randomNumbers);
+    // Do the math
+    const finalRandomNum = math.finalRandom(randomNumbers);
 
     console.log('RANDOMS: ', randomNumbers);
     console.log('MY FINAL RANDOM IS: ', finalRandomNum);
 
     tp.send(events.FRND_EVENT, finalRandomNum, DELEGATES);
 
-    const finalResponses = await waiter.waitForAll(events.FRND_EVENT, numDelegates, Infinity);
+    const finalResponses = await waiter.collect(events.FRND_EVENT, 5000);
     const resolution     = math.votingResults(finalResponses.map((r) => r.data));
 
     // Most frequent final random number from delegates
     const mostCommon = resolution[0];
 
-    console.log('FINAL RANDOMS: ',  resolution);
     console.log('MOST COMMON IS: ', mostCommon);
 
-    if (mostCommon.count > (numDelegates / 2)) {
+    if (mostCommon.count > Math.floor(resolution.length / 2)) {
         console.log('ROUND SUCCESSFUL, SENDING VALUE TO BP: %s', mostCommon.value);
         return tp.send(events.BP_CATCH_IT, mostCommon.value, '*');
     }

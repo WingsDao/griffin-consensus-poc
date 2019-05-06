@@ -9,8 +9,9 @@ const events    = require('lib/events');
 const peer      = require('core/file-peer');
 const chaindata = require('core/db').chain;
 const wallet    = require('services/wallet');
+const tp        = require('core/transport');
 
-require('core/transport')
+exports.observe = () => tp
 
     /**
      * We don't want one to receive 33 new blocks from delegates so for now we stick
@@ -52,20 +53,6 @@ require('core/transport')
         if (msg.sender !== this.transportId) {
             const lastBlock = await chaindata.getLatest();
             this.send(events.SHARE_CHAIN, lastBlock.number, msg.sender);
-        }
-    })
-
-    .on(events.CREATE_POOL_SERVER, function createServer(data, msg) {
-        if (msg.sender !== this.transportId) {
-            const {port} = peer.peer(pool.createReadStream());
-            this.send(events.POOL_SERVER_CREATED, port, msg.sender);
-        }
-    })
-
-    .on(events.CREATE_CHAINDATA_SERVER, function createServer(data, msg) {
-        if (msg.sender !== this.transportId) {
-            const {port} = peer.peer(chaindata.createReadStream());
-            this.send(events.CHAINDATA_SERVER_CREATED, port, msg.sender);
         }
     })
 

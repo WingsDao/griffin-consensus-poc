@@ -46,6 +46,11 @@ exports.pool = async function syncPool() {
     tp.send(events.CREATE_POOL_SERVER, null, myNode.msg.sender);
 
     const peerData = await waiter.waitFor(events.POOL_SERVER_CREATED, WAIT_FOR);
+
+    if (peerData === null) {
+        return;
+    }
+
     const peerPort = peerData.data;
 
     // Clean up before syncing
@@ -77,6 +82,11 @@ exports.chain = async function syncChain() {
     tp.send(events.CREATE_CHAINDATA_SERVER, null, oneAndOnly.msg.sender);
 
     const peerData = await waiter.waitFor(events.CHAINDATA_SERVER_CREATED, WAIT_FOR);
+
+    if (peerData === null) {
+        return;
+    }
+
     const peerPort = peerData.data;
 
     // Clean up before syncing
