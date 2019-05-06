@@ -16,6 +16,11 @@ const chain    = require('core/db').chain;
 const repl     = require('repl');
 const observer = require('services/observer');
 
+const roles = {
+    delegate: require('roles/delegate'),
+    producer: require('roles/block-producer')
+};
+
 (async function initServices() {
 
     // First of all sync data from existing node
@@ -33,16 +38,9 @@ const observer = require('services/observer');
 
     observer.observe();
 
-    // Attach both roles by default
+    await defineRoles();
 
-    const isDelegate = await me.isDelegate();
-    const isProducer = await me.isProducer();
-
-    console.log('Delegate: %s', isDelegate);
-    console.log('Producer: %s', isProducer);
-
-    isDelegate && require('roles/delegate').attach();
-    isProducer && require('roles/block-producer').attach();
+    tp.on(evt.NEW_BLOCK_RECEIVED, defineRoles);
 
     console.log('Starting prompt...');
 
@@ -51,11 +49,17 @@ const observer = require('services/observer');
     Object.assign(tty.context, {tp, evt, me});
 });
 
-// QUESTION
-//     ON START ROUND EVENT
-//         AM I DELEGATE?
-//             ATTACH LISTENERS FOR DELEGATE FOR 1 ROUND
-//         AM I PRODUCER?
-//             ATTACH LISTENERS FOR PRODUCER FOR 1 ROUND
-//
-//     ON ROUND END REMOVE ALL LISTENERS AND LIVE FREE
+async function defineRoles(block) {
+
+    roles.delegate.detach();
+    roles.producer.detach();
+
+    const isDelegate = await me.isDelegate(block);
+    const isProducer = await me.isProducer(block);
+
+    console.log('Delegate: %s', isDelegate);
+    console.log('Producer: %s', isProducer);
+
+    isDelegate && roles.delegate.attach();
+    isProducer && roles.producer.attach();
+}

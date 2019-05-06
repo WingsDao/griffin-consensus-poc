@@ -136,7 +136,7 @@ async function exchangeRandoms() {
 
     tp.send(events.FRND_EVENT, finalRandomNum, DELEGATES);
 
-    const finalResponses = await waiter.collect(events.FRND_EVENT, 5000);
+    const finalResponses = await waiter.collect(events.FRND_EVENT, 1000);
     const resolution     = math.votingResults(finalResponses.map((r) => r.data));
 
     // Most frequent final random number from delegates

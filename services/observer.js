@@ -31,6 +31,8 @@ exports.observe = () => tp
 
             await chaindata.add(block.number, newBlock);
 
+            tp.emit(events.NEW_BLOCK_RECEIVED, JSON.parse(newBlock));
+
             // QUESTION: should definition of role happen here? Or we could use same
             // event in another module/service to attach/detach listeners?
         });

@@ -26,17 +26,23 @@ const me = module.exports = exports = new Account(SECRET_KEY);
 /**
  * Check whether me (process account) is delegate
  *
- * @return {Promise<Boolean>} Whether account is delegate
+ * @param  {Object}           [block=null] Optional: block to get info from
+ * @return {Promise<Boolean>}              Whether account is delegate
  */
-exports.isDelegate = function () {
-    return chain.getLatest().then((block) => state.isDelegate(block.state, me.hexAddress));
+exports.isDelegate = function (block = null) {
+    return (block === null)
+        && chain.getLatest().then((block) => state.isDelegate(block.state, me.hexAddress))
+        || Promise.resolve(state.isDelegate(block.state, me.hexAddress));
 };
 
 /**
  * Check whether me (process account) is delegate
  *
- * @return {Promise<Boolean>} Whether account is block producer
+ * @param  {Object}           [block=null] Optional: block to get info from
+ * @return {Promise<Boolean>}              Whether account is block producer
  */
-exports.isProducer = function () {
-    return chain.getLatest().then((block) => state.isBlockProducer(block.state, me.hexAddress));
+exports.isProducer = function (block = null) {
+    return (block === null)
+        && chain.getLatest().then((block) => state.isBlockProducer(block.state, me.hexAddress))
+        || Promise.resolve(state.isBlockProducer(block.state, me.hexAddress));
 };
