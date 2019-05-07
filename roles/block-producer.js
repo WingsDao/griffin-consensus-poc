@@ -16,9 +16,12 @@ const waiter     = require('services/waiter');
 const parseState = require('lib/block-state');
 const me         = require('services/wallet');
 
+// How long to wait for FRN from delegates
+const FRN_WAIT_TIME = 5000;
+
 exports.attach = function attach() {
 
-    tp.on(events.START_ROUND, waitAndProduce);
+    tp.once(events.START_ROUND, waitAndProduce);
 };
 
 exports.detach = function detach() {
@@ -48,24 +51,25 @@ async function waitAndProduce() {
     //
     // QUESTION: Should we do a check somewhere for round definition or smth. Number of retries mb?
     // We want to let BP know whether round has been restarted so he can drop this listener
-    const random = await waiter.waitFor(events.BP_CATCH_IT, Infinity);
+    const random = await waiter.waitFor(events.BP_CATCH_IT, FRN_WAIT_TIME);
 
     // On each round every block producer checks whether he should produce this block.
     // We may want every bp to produce block every round.
     // TODO: remember about backup block producer, as he have to produce as well in order to get block reward.
     // FIXME Supply real FRN.
-    const isProducer = me.hexAddress === math.findProducer(random.data, state.blockProducers);
+    const nextProducer = math.findProducer(random.data, state.blockProducers);
+    const isProducer   = (me.hexAddress === nextProducer);
 
     if (!isProducer) {
-        console.log('I AM NO PRODUCER');
+        console.log('Next producer is: %s and I am %s', nextProducer, me.hexAddress);
         return;
     }
 
-    console.log('I AM PRODUCER %s %s', random.data, me.hexAddress);
+    console.log('I am producer %s %s', random.data, me.hexAddress);
 
     // Drain a pool and create new block
     const transactions = await pool.drain().catch(console.error);
-    const block        = me.produceBlock(currentBlock, transactions);
+    const block        = me.produceBlock(currentBlock, transactions || []);
 
     // Assign random number to newly produced block
     block.randomNumber = random.data;
@@ -77,6 +81,7 @@ async function waitAndProduce() {
     // Send event so delegates know where to get block
     tp.send(events.VERIFY_BLOCK, {
         port,
+        publicKey:  me.publicKey.toString('hex'),
         block: {
             number:     block.number,
             hash:       block.hash,

@@ -8,7 +8,7 @@
 
 const keccak256  = require('keccak256');
 const math       = require('lib/math');
-const events     = require('lib/events');
+const evt        = require('lib/events');
 const Account    = require('core/account');
 const tp         = require('core/transport');
 const chain      = require('core/db').chain;
@@ -41,12 +41,6 @@ const conf = require('lib/constants');
  */
 const DELEGATES  = '*';
 
-// /**
-//  * Total number of responses to await.
-//  * @type {Number}
-//  */
-// const DELEGATES_COUNT = conf.ACTIVE_DELEGATES_COUNT + conf.ACTIVE_SUCCESSOR_DELEGATES_COUNT - 1;
-
 /**
  * Number of ms to wait to receive other delegates' randoms.
  * @type {Number}
@@ -58,8 +52,8 @@ const WAIT_TIME = conf.DELEGATE_WAIT_TIME || 3000;
  */
 exports.attach = function attach() {
 
-    tp.on(events.START_ROUND,  exchangeRandoms);
-    tp.on(events.VERIFY_BLOCK, blockVerification);
+    tp.on(evt.START_ROUND,  exchangeRandoms);
+    // tp.on(evt.VERIFY_BLOCK, blockVerification);
 };
 
 /**
@@ -67,8 +61,8 @@ exports.attach = function attach() {
  */
 exports.detach = function detach() {
 
-    tp.off(events.START_ROUND,  exchangeRandoms);
-    tp.off(events.VERIFY_BLOCK, blockVerification);
+    tp.off(evt.START_ROUND,  exchangeRandoms);
+    // tp.off(evt.VERIFY_BLOCK, blockVerification);
 };
 
 /**
@@ -95,31 +89,25 @@ async function exchangeRandoms() {
     // Get current block first
     const currentBlock = await chain.getLatest();
     const state        = parseState(currentBlock.state);
-
-    // Get list of delegates from state
     const delegates    = state.delegates;
 
-    // Let's use this variable as if it existed
-    const numDelegates = 1 || 33;
-    const myRandomNum  = math.random().toString(10);
-
-    // sign message
-    const messageWithRandom = {
-        random:    myRandomNum,
+    // Start the delegate part
+    // 1. Generate and stream randmo number over network
+    const myRandom  = math.random();
+    const msgToSend = {
+        random:    myRandom,
         publicKey: me.publicKey.toString('hex'),
-        signature: me.signMessage(myRandomNum).toString('hex')
+        signature: me.signMessage(myRandom).toString('hex')
     };
 
-    tp.send(events.RND_EVENT, messageWithRandom, DELEGATES);
+    const resPromise = waiter.collect(evt.RND_EVENT, WAIT_TIME);
 
-    console.log('SENDING MY RANDOM', myRandomNum);
+    tp.send(evt.RND_EVENT, msgToSend, DELEGATES);
 
-    const responses        = await waiter.collect(events.RND_EVENT, WAIT_TIME);
-    const responseMessages = responses.map((r) => r.data);
-
-    responseMessages.forEach((msg) => console.log(Account.publicKeyToAddress(msg.publicKey)));
-
-    const randomNumbers = responseMessages
+    // Message sent, other delegates did the same job
+    // 2. Wait for same action to be done by other delegates
+    const randomNumbers = (await resPromise)
+        .map((msg)    => msg.data)
         .filter((msg) => delegates.includes(Account.publicKeyToAddress(msg.publicKey)))
         .filter((msg) => Account.verifyMessage(msg.random, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')))
         .map((msg)    => +msg.random);
@@ -129,66 +117,65 @@ async function exchangeRandoms() {
     // QUESTION: How to test setups when there's only runner X count? We'd have to run some test-ready setting.
     // if (randomNumbers.length < conf.ACTIVE_DELEGATES_COUNT) { }
 
-    // Do the math
     const finalRandomNum = math.finalRandom(randomNumbers);
+    const fresPromise    = waiter.collect(evt.FRND_EVENT, 1000); // Collect FRN for a second
 
-    tp.send(events.FRND_EVENT, finalRandomNum, DELEGATES);
+    tp.send(evt.FRND_EVENT, finalRandomNum, DELEGATES);
 
-    const finalResponses = await waiter.collect(events.FRND_EVENT, 1000);
+    const finalResponses = await fresPromise;
     const resolution     = math.votingResults(finalResponses.map((r) => r.data));
+    const finalRandom    = resolution[0].value;
 
-    // Most frequent final random number from delegates
-    const mostCommon = resolution[0];
+    console.log('Voting results are: ', finalRandom);
+    console.log('Other results for FRN: ', resolution);
 
-    console.log('MOST COMMON IS: ', mostCommon);
-    console.log('OTHER RESULTS: ', resolution);
-
-    if (mostCommon.count <= Math.floor(finalResponses.length / 2)) {
+    if (resolution[0].count <= Math.floor(finalResponses.length / 2)) {
 
         // QUESTION: what should we do programmatically when round is unsucceful?
         // I mean should we restart everything? Or only this function? Consensus to re-roll
         // has to be reached somehow. Think about it
 
-        console.log('ROUND UNSUCCESSFUL: ', mostCommon.count, parseInt(numDelegates / 2));
+        console.log('Round unsucceful, retrying in 2 seconds');
+
         return waiter.wait(2000).then(exchangeRandoms);
     }
 
-    console.log('ROUND SUCCESSFUL, SENDING VALUE TO BP: %s', mostCommon.value);
+    console.log('Round successors, streaming: %s', finalRandom);
 
-    return tp.send(events.BP_CATCH_IT, mostCommon.value, '*');
+    tp.send(evt.BP_CATCH_IT, finalRandom, '*');
+
+    // X. Wait for producer to produce block (but also verify incoming blocks)
+    const nextProducer = math.findProducer(finalRandom, state.blockProducers);
+    const peerData     = await waiter.waitForCond(evt.VERIFY_BLOCK, ({publicKey}) => {
+        return (Account.publicKeyToAddress(publicKey) === nextProducer);
+    }, 1000);
+
+    console.log('Verifying received block');
+
+    const address = peerData.meta.address;
+    const port    = peerData.data.port;
+    const block   = await peer.pullString(address, port).then(JSON.parse).catch(console.error);
+
+    if (!block || !isValidBlock(block, currentBlock)) {
+        return console.log('Block is invalid!');
+    }
+
+    console.log('Streaming block over the network');
+
+    return streamBlock(block);
 }
 
 /**
- * Verify block validity.
+ * Validate block.
  *
- * This implies verification of:
- * - state calculation
- * - state root
- * - receipts root
- *
- * @listens events.VERIFY_BLOCK
- *
- * @param  {Number}  port UDP port.
- * @param  {Object}  msg  Message description.
- * @param  {Object}  meta UDP information.
- * @return {Promise}
+ * @param  {Object}           producedBlock Block produced by BP.
+ * @return {Promise<Boolean>}               Whether block is valid or not.
  */
-async function blockVerification({port, block: short}, msg, meta) {
+async function isValidBlock(producedBlock, parentBlock) {
+    const block = me.produceBlock(parentBlock, producedBlock.transactions);
 
-    console.log('VERIFYING BLOCK: %s', JSON.stringify(short));
-
-    const rawData = await peer.pullString(meta.address, port).catch(console.error);
-    const block   = JSON.parse(rawData);
-
-    if (block && await isValidBlock(block) && isValidBlockProducer(block)) {
-        console.log('streaming block over network');
-        return streamBlock(block);
-    }
-
-    console.log('block is invalid', !!block, await isValidBlock(block), isValidBlockProducer(block));
-
-    // TODO Case when block is invalid.
-    return null;
+    return (producedBlock.stateRoot    === block.stateRoo)
+        && (producedBlock.receiptsRoot === block.receiptsRoot);
 }
 
 /**
@@ -196,7 +183,7 @@ async function blockVerification({port, block: short}, msg, meta) {
  *
  * @todo create Block type definition somewhere
  *
- * @emits events.NEW_BLOCK
+ * @emits evt.NEW_BLOCK
  *
  * @param  {Block}   block Block to stream over network.
  * @return {Promise}       Promise that ends with peering result or null when 0 nodes were online.
@@ -204,37 +191,43 @@ async function blockVerification({port, block: short}, msg, meta) {
 async function streamBlock(block) {
     const nodesCount = tp.knownNodes.size - 1;
 
+    // QUESTION - need to rethink this function - rn it's unclear what's happening
+    // ALSO - decide something about signatures from delegates and include them into block
+
     // If there's no one to share - why bother?
     if (nodesCount === 0) {
         return null;
     }
 
-    const {port, promise} = peer.peerString(block, nodesCount);
+    const {port, promise} = peer.peerString(block, nodesCount, 5000);
+    const hashedBlock     = keccak256(JSON.stringify(block)).toString('hex');
+    const signature       = me.signMessage(hashedBlock).toString('hex');
 
-    const hashedBlock = keccak256(JSON.stringify(block)).toString('hex');
-    const signature   = me.signMessage(hashedBlock).toString('hex');
+    const otherSinatures  = waiter.collect(evt.BLOCK_SIG, 1000);
 
-    tp.send(events.BLOCK_EVENT, {
+    tp.send(evt.BLOCK_SIG, {
         port,
         hashedBlock,
         publicKey: me.publicKey.toString('hex'),
         signature
     }, DELEGATES);
 
-    const numDelegates     = 1 || 33;
-    const responses        = await waiter.waitForAll(events.BLOCK_EVENT, numDelegates, Infinity);
-    const responseMessages = responses.map((r) => r.data);
-    const verifiedMessages = responseMessages.filter(msg => Account.verifyMessage(msg.hashedBlock, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
-    const verifiedBlocks   = verifiedMessages.map(msg => msg.hashedBlock);
+    const signatures = (await otherSinatures).map((msg) => msg.data);
 
-    console.log('Verified blocks:', verifiedBlocks);
+    // const numDelegates     = 1 || 33;
+    // const responses        = await waiter.waitForAll(evt.BLOCK_SIG, numDelegates, Infinity);
+    // const responseMessages = responses.map((r) => r.data);
+    // const verifiedMessages = responseMessages.filter(msg => Account.verifyMessage(msg.hashedBlock, Buffer.from(msg.publicKey, 'hex'), Buffer.from(msg.signature, 'hex')));
+    // const verifiedBlocks   = verifiedMessages.map(msg => msg.hashedBlock);
+    //
+    // console.log('Verified blocks:', verifiedBlocks);
+    //
+    // if (verifiedBlocks.length < numDelegates) {
+    //     // TODO Case when not enough delegates verified block.
+    //     console.log('VERIFIED < NUMBER OF DELEGATES');
+    // }
 
-    if (verifiedBlocks.length < numDelegates) {
-        // TODO Case when not enough delegates verified block.
-        console.log('VERIFIED < NUMBER OF DELEGATES');
-    }
-
-    tp.send(events.NEW_BLOCK, {
+    tp.send(evt.NEW_BLOCK, {
         port,
         block: {
             number:     block.number,
@@ -244,43 +237,8 @@ async function streamBlock(block) {
             producer:   block.producer
         },
         publicKey: me.publicKey.toString('hex'),
-        signature
+        signatures
     });
 
     return promise;
-}
-
-
-/**
- * Validate block producer.
- *
- * TODO Implement this function.
- *
- * @param  {Object}  block             Block produced by BP.
- * @param  {Number}  finalRandomNumber Final random number of current round.
- * @return {Boolean}                   Whether block producer is a valid next BP or not.
- */
-function isValidBlockProducer(block, finalRandomNumber) {
-    // return (block.producer === blockchain.getBlockProducer(block, finalRandomNumber));
-
-
-
-    finalRandomNumber;
-    block;
-
-    return true;
-}
-
-/**
- * Validate block.
- *
- * @param  {Object}           producedBlock Block produced by BP.
- * @return {Promise<Boolean>}               Whether block is valid or not.
- */
-async function isValidBlock(producedBlock) {
-    const parentBlock = await chain.getLatest();
-    const block       = me.produceBlock(parentBlock, producedBlock.transactions);
-
-    return producedBlock.stateRoot === block.stateRoot
-        && producedBlock.receiptsRoot === block.receiptsRoot;
 }
