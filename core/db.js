@@ -133,7 +133,12 @@ class Chain extends DB {
      * @param {String} block  Block to store
      */
     add(number, block) {
-        return this.db.put(number, block.constructor === String && block || JSON.stringify(block));
+        const toPut = (block.constructor === String) && block || JSON.stringify(block);
+
+        return Promise.all([
+            this.db.put(number, toPut),
+            this.db.put('latest', toPut)
+        ]);
     }
 
     /**
@@ -155,15 +160,17 @@ class Chain extends DB {
      * @return {Promise} Promise with latest block or genesis
      */
     getLatest() {
-        return new Promise((resolve, reject) => {
-            return this.db
-                .iterator({reverse: true, limit: 1})
-                .next((err, key, value) => {
-                    return (err)
-                        && reject(err)
-                        || resolve(value && JSON.parse(value.toString()) || this.genesis);
-                });
-        });
+        return this.db.get('latest').then(JSON.parse).catch(() => this.genesis);
+
+        // return new Promise((resolve, reject) => {
+        //     return this.db
+        //         .iterator({reverse: true, limit: 1})
+        //         .next((err, key, value) => {
+        //             return (err)
+        //                 && reject(err)
+        //                 || resolve(value && JSON.parse(value.toString()) || this.genesis);
+        //         });
+        // });
     }
 
     /**
@@ -172,13 +179,19 @@ class Chain extends DB {
      * @return {stream.Writable} Writable stream
      */
     createWriteStream() {
+        let latest        = 0;
         const db          = this.db;
         const writeStream = new stream.Writable({
             write(chunk, encoding, cb) {
-                const string = chunk.toString();
-                const number = JSON.parse(string).number;
+                const string   = chunk.toString();
+                const number   = JSON.parse(string).number;
+                const promises = [db.put(number, string)];
 
-                return db.put(number, string).then(() => cb(null, string));
+                if (number > latest) {
+                    promises.push(db.put('latest', string));
+                }
+
+                return Promise.all(promises).then(() => cb(null, string));
             }
         });
 

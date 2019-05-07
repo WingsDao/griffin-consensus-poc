@@ -194,8 +194,8 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
         block.receipts.push(blockchain.generateReceipt(block, txIndex, serializedTx, tx));
     }
 
-    block.stateRoot    = helpers.merkleRoot(block.state.map(account => JSON.stringify(account)));
-    block.receiptsRoot = helpers.merkleRoot(block.receipts.map(receipt => JSON.stringify(receipt)));
+    block.stateRoot    = helpers.merkleRoot(block.state.map((account)    => JSON.stringify(account)));
+    block.receiptsRoot = helpers.merkleRoot(block.receipts.map((receipt) => JSON.stringify(receipt)));
 
     return block;
 };

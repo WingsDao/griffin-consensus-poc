@@ -58,6 +58,20 @@ exports.observe = () => tp
         }
     })
 
+    .on(events.CREATE_POOL_SERVER, function createServer(data, msg) {
+        if (msg.sender !== this.transportId) {
+            const {port} = peer.peer(pool.createReadStream());
+            this.send(events.POOL_SERVER_CREATED, port, msg.sender);
+        }
+    })
+
+    .on(events.CREATE_CHAINDATA_SERVER, function createServer(data, msg) {
+        if (msg.sender !== this.transportId) {
+            const {port} = peer.peer(chaindata.createReadStream());
+            this.send(events.CHAINDATA_SERVER_CREATED, port, msg.sender);
+        }
+    })
+
     .on(events.PING, function areYouLookingForMe(data, msg) {
         // QUESTION: okay, we have PING event, what's next? How should it be used?
 

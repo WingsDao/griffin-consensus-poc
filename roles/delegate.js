@@ -52,8 +52,7 @@ const WAIT_TIME = conf.DELEGATE_WAIT_TIME || 3000;
  */
 exports.attach = function attach() {
 
-    tp.on(evt.START_ROUND,  exchangeRandoms);
-    // tp.on(evt.VERIFY_BLOCK, blockVerification);
+    tp.on(evt.START_ROUND, exchangeRandoms);
 };
 
 /**
@@ -61,8 +60,7 @@ exports.attach = function attach() {
  */
 exports.detach = function detach() {
 
-    tp.off(evt.START_ROUND,  exchangeRandoms);
-    // tp.off(evt.VERIFY_BLOCK, blockVerification);
+    tp.off(evt.START_ROUND, exchangeRandoms);
 };
 
 /**
@@ -148,7 +146,7 @@ async function exchangeRandoms() {
     const nextProducer = math.findProducer(finalRandom, state.blockProducers);
     const peerData     = await waiter.waitForCond(evt.VERIFY_BLOCK, ({publicKey}) => {
         return (Account.publicKeyToAddress(publicKey) === nextProducer);
-    }, 1000);
+    }, 2000);
 
     console.log('Verifying received block');
 
@@ -189,7 +187,7 @@ async function isValidBlock(producedBlock, parentBlock) {
  * @return {Promise}       Promise that ends with peering result or null when 0 nodes were online.
  */
 async function streamBlock(block) {
-    const nodesCount = tp.knownNodes.size - 1;
+    const nodesCount = 5 + tp.knownNodes.size;
 
     // QUESTION - need to rethink this function - rn it's unclear what's happening
     // ALSO - decide something about signatures from delegates and include them into block
@@ -202,13 +200,14 @@ async function streamBlock(block) {
     const {port, promise} = peer.peerString(block, nodesCount, 5000);
     const hashedBlock     = keccak256(JSON.stringify(block)).toString('hex');
     const signature       = me.signMessage(hashedBlock).toString('hex');
+    const publicKey       = me.publicKey.toString('hex');
 
     const otherSinatures  = waiter.collect(evt.BLOCK_SIG, 1000);
 
     tp.send(evt.BLOCK_SIG, {
         port,
         hashedBlock,
-        publicKey: me.publicKey.toString('hex'),
+        publicKey,
         signature
     }, DELEGATES);
 
@@ -236,7 +235,7 @@ async function streamBlock(block) {
             random:     block.randomNumber,
             producer:   block.producer
         },
-        publicKey: me.publicKey.toString('hex'),
+        publicKey,
         signatures
     });
 
