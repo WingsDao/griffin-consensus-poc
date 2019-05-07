@@ -50,14 +50,15 @@ async function collect(evt, wait = 1000) {
 async function waitForCond(evt, cb, wait = 1000) {
     return new Promise(async function (resolve) {
 
-        function listener(data, msg, meta) {
-            if (cb(data, msg, meta)) {
+        msg.on(evt, listener);
+        setTimeout(() => msg.off(evt, listener) && resolve(null), wait);
+
+        function listener(data, message, meta) {
+            if (cb(data, message, meta)) {
                 msg.off(evt, listener);
-                resolve(data, msg, meta);
+                resolve({data, msg: message, meta});
             }
         }
-
-        setTimeout(() => msg.off(evt, listener) && resolve(null), wait);
     });
 }
 
