@@ -10,6 +10,8 @@
 'use strict';
 
 const Account = require('core/account');
+const chain   = require('core/db').chain;
+const state   = require('lib/block-state');
 
 /**
  * Secret key parsed from ENV when provided.
@@ -19,4 +21,28 @@ const Account = require('core/account');
  */
 const SECRET_KEY = process.env.SECRET_KEY && Buffer.from(process.env.SECRET_KEY, 'hex') || null;
 
-module.exports = exports = new Account(SECRET_KEY);
+const me = module.exports = exports = new Account(SECRET_KEY);
+
+/**
+ * Check whether me (process account) is delegate
+ *
+ * @param  {Object}           [block=null] Optional: block to get info from
+ * @return {Promise<Boolean>}              Whether account is delegate
+ */
+exports.isDelegate = function (block = null) {
+    return (block === null)
+        && chain.getLatest().then((block) => state.isDelegate(block.state, me.hexAddress))
+        || Promise.resolve(state.isDelegate(block.state, me.hexAddress));
+};
+
+/**
+ * Check whether me (process account) is delegate
+ *
+ * @param  {Object}           [block=null] Optional: block to get info from
+ * @return {Promise<Boolean>}              Whether account is block producer
+ */
+exports.isProducer = function (block = null) {
+    return (block === null)
+        && chain.getLatest().then((block) => state.isBlockProducer(block.state, me.hexAddress))
+        || Promise.resolve(state.isBlockProducer(block.state, me.hexAddress));
+};

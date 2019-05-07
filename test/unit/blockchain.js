@@ -18,7 +18,7 @@ const genesis    = require('genesis');
  */
 const SECRET_KEY  = Buffer.from('557dce58018cf502a32b9b7723024805399350d006a4f71c3b9f489f7085cb50', 'hex');
 
-describe('Blockchain', () => {
+xdescribe('Blockchain', () => {
     let account        = {};
     let delegate       = {};
     let delegates      = [];
@@ -33,10 +33,10 @@ describe('Blockchain', () => {
         account  = Account(SECRET_KEY);
         delegate = Account();
 
-        serializedTx = account.tx(delegate.getHexAddress(), 100);
+        serializedTx = account.tx(delegate.hexAddress, 100);
         transactions.push(serializedTx);
 
-        serializedTx = account.vote(delegate.getHexAddress());
+        serializedTx = account.vote(delegate.hexAddress);
         transactions.push(serializedTx);
 
         serializedTx = account.stake(100);
@@ -46,19 +46,19 @@ describe('Blockchain', () => {
     });
 
     it('get account balance', async () => {
-        const balance = await blockchain.getBalance(account.getHexAddress());
+        const balance = await blockchain.getBalance(account.hexAddress);
 
         balance.should.be.a('number');
     });
 
     xit('get account stake', async () => {
-        const stake = await blockchain.getStake(account.getHexAddress());
+        const stake = await blockchain.getStake(account.hexAddress);
 
         stake.should.be.a('number');
     });
 
     it('get account votes', async () => {
-        const votes = await blockchain.getVotesFor(delegate.getHexAddress());
+        const votes = await blockchain.getVotesFor(delegate.hexAddress);
 
         // TODO: finish test
     });
@@ -92,6 +92,8 @@ describe('Blockchain', () => {
     });
 
     it('check if account is delegate', async () => {
+        console.log(delegates[0])
+
         const isDelegate = await blockchain.isDelegate(delegates[0]);
 
         isDelegate.should.be.true;
@@ -106,6 +108,6 @@ describe('Blockchain', () => {
     xit('check if account is block producer', async () => {
         const isBlockProducer = await blockchain.isBlockProducer(blockProducers[0].address);
 
-        // TODO: TEST
+        isBlockProducer.should.be.true;
     });
 });

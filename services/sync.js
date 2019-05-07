@@ -34,11 +34,23 @@ exports.pool = async function syncPool() {
     tp.send(events.REQUEST_POOL);
 
     const nodes  = await waiter.waitForAll(events.SHARE_POOL, 10, WAIT_FOR);
+
+    // QUESTION: what principle should lay below sync server choosing?
+    // Currently 'just first' one is taken
     const myNode = nodes.sort((a, b) => a.data - b.data)[0];
+
+    if (!myNode) {
+        return;
+    }
 
     tp.send(events.CREATE_POOL_SERVER, null, myNode.msg.sender);
 
     const peerData = await waiter.waitFor(events.POOL_SERVER_CREATED, WAIT_FOR);
+
+    if (peerData === null) {
+        return;
+    }
+
     const peerPort = peerData.data;
 
     // Clean up before syncing
@@ -56,14 +68,25 @@ exports.pool = async function syncPool() {
  */
 exports.chain = async function syncChain() {
 
-    tp.send(events.REQUEST_CHAIN, null, '*');
+    tp.send(events.REQUEST_CHAIN);
 
+    // QUESTION: what principle should lay below sync server choosing?
+    // Currently 'just first' one is taken
     const responses  = await waiter.waitForAll(events.SHARE_CHAIN, 10, 3000);
     const oneAndOnly = responses[0];
+
+    if (!oneAndOnly) {
+        return;
+    }
 
     tp.send(events.CREATE_CHAINDATA_SERVER, null, oneAndOnly.msg.sender);
 
     const peerData = await waiter.waitFor(events.CHAINDATA_SERVER_CREATED, WAIT_FOR);
+
+    if (peerData === null) {
+        return;
+    }
+
     const peerPort = peerData.data;
 
     // Clean up before syncing

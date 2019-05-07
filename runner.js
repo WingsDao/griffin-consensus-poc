@@ -19,7 +19,13 @@ const Account = require('core/account');
  *
  * @type {Number}
  */
-const DELEGATE_BALANCE = 100;
+const DELEGATE_BALANCE = 100000000;
+
+/**
+ * Initial staked amount for block producers.
+ * @type {Number}
+ */
+const STAKED_AMOUNT = 100;
 
 /**
  * Path to genesis file.
@@ -36,21 +42,22 @@ const bank      = Account();
 
 const genesis = Genesis();
 
-genesis.addAccount(bank.address.toString('hex'), 1000000);
+genesis.addAccount(bank.hexAddress, 1000000);
 
 for (let i = 0; i < num; i++) {
     const account = Account();
 
     delegates.push(account);
-    genesis.addDelegate(account.address.toString('hex'), DELEGATE_BALANCE);
+    genesis.addDelegate(account.hexAddress, DELEGATE_BALANCE);
+    genesis.addProducer(account.hexAddress, STAKED_AMOUNT);
 }
 
-for (let i = 0; i < num; i++) {
-    const account = Account();
-
-    producers.push(account);
-    genesis.addProducer(account.address.toString('hex'), 1);
-}
+// for (let i = 0; i < num; i++) {
+//     const account = Account();
+//
+//     producers.push(account);
+//     genesis.addProducer(account.address.toString('hex'), 1);
+// }
 
 genesis.writeToFile(GENESIS_PATH);
 
@@ -58,7 +65,7 @@ const kids = []
     .concat(delegates.map(spawnDelegate))
     .concat(producers.map(spawnProducer));
 
-const bankKiddo = cp.fork('clients/bank.js', ['bank'], {env: Object.assign(env, {SECRET_KEY: bank.secretKey.toString('hex')})});
+// const bankKiddo = cp.fork('clients/bank.js', ['bank'], {env: Object.assign(env, {SECRET_KEY: bank.secretKey.toString('hex')})});
 const repl      = require('repl').start('> ');
 
 repl.context.kids  = kids;
@@ -71,8 +78,7 @@ tp.on(evt.PONG, (data) => console.log('Yup, dude, %s', data));
 tp.delegates = new Map();
 tp.on(evt.I_AM_HERE, (data, msg) => tp.delegates.set(msg.sender, msg));
 
-console.log('DELEGATES:') || delegates.map((e) => console.log('-', e.getHexAddress()));
-console.log('PRODUCERS:') || producers.map((e) => console.log('-', e.getHexAddress()));
+console.log('ACCOUNTS:') || delegates.map((e, i) => console.log('del_' + (i + 1), '-', e.hexAddress));
 
 tp.on(evt.START_ROUND, function () {
     tp.once(evt.NEW_BLOCK, function ({block}) {
@@ -106,7 +112,7 @@ function spawnDelegate(e, i) {
     fs.mkdirSync(datadir);
 
     const stream = fs.createWriteStream(datadir + '/out.log', {flags: 'w'});
-    const child  = cp.fork('clients/delegate.js', [], options);
+    const child  = cp.fork('index.js', [1], options);
 
     child.stdout.pipe(stream);
     child.stderr.pipe(stream);
@@ -138,7 +144,7 @@ function spawnProducer(e, i) {
 
 function finish(...args) {
     return console.log('Cleaning up:', args)
-        || bankKiddo.kill()
+        // || bankKiddo.kill()
         || true
         && kids.map((kid) => kid.kill())
         && process.exit(0);

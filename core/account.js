@@ -51,6 +51,48 @@ function Account(secretKey) {
 }
 
 /**
+ * Signing message by account private key.
+ *
+ * @param  {String} message Text message to sign.
+ * @return {Buffer}         Signature of message.
+ */
+Account.prototype.signMessage = function signMessage(message) {
+    const hash = keccak256(Buffer.from(message));
+
+    return secp256k1.sign(hash, this.secretKey).signature;
+};
+
+/**
+ * Verifying message signed by account.
+ *
+ * @param  {String}  message   Message to verify.
+ * @param  {Buffer}  publicKey Public key of account that signed message.
+ * @param  {Buffer}  signature Signature of message.
+ * @return {Boolean}           Result of signature verification.
+ */
+Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
+    const hash = keccak256(Buffer.from(message));
+
+    return secp256k1.verify(hash, signature, Buffer.concat([SECP256K1_PREFIX, publicKey]));
+};
+
+/**
+ * Hashes publicKey with keccak256 and gets matching address. Adds 0x prefix!
+ *
+ * @param  {Buffer|String} publicKey      Public key as Buffer or 'hex' encoded String
+ * @param  {String}        [encoding=hex] Optional encoding of publicKey when pk is String
+ * @return {String}                       0x-prefixed address
+ */
+Account.publicKeyToAddress = function publicKeyToAddress(publicKey, encoding) {
+
+    if (publicKey.constructor !== Buffer) {
+        publicKey = Buffer.from(publicKey, encoding || 'hex');
+    }
+
+    return '0x' + keccak256(publicKey).slice(12).toString('hex');
+};
+
+/**
  * Creates new serialized signed transaction.
  *
  * @example
@@ -80,38 +122,20 @@ Account.prototype.tx = function tx(to, value, data='0x00') {
 };
 
 /**
+ * 0x-prefixed hex representation on address.
+ * @property {String}
+ */
+Object.defineProperty(Account.prototype, 'hexAddress', {
+    get() { return '0x' + this.address.toString('hex'); }
+});
+
+/**
  * Get address of account as hex string.
  *
- * @returns {string} Address as hex string.
+ * @returns {String} Address as hex string.
  */
 Account.prototype.getHexAddress = function getHexAddress() {
     return '0x' + this.address.toString('hex');
-};
-
-/**
- * Signing message by account private key.
- *
- * @param  {String} message Text message to sign.
- * @return {Buffer}         Signature of message.
- */
-Account.prototype.signMessage = function signMessage(message) {
-    const hash = keccak256(Buffer.from(message));
-
-    return secp256k1.sign(hash, this.secretKey).signature;
-};
-
-/**
- * Verifying message signed by account.
- *
- * @param  {String}  message   Message to verify.
- * @param  {Buffer}  publicKey Public key of account that signed message.
- * @param  {Buffer}  signature Signature of message.
- * @return {Boolean}           Result of signature verification.
- */
-Account.verifyMessage = function verifyMessage(message, publicKey, signature) {
-    const hash = keccak256(Buffer.from(message));
-
-    return secp256k1.verify(hash, signature, Buffer.concat([SECP256K1_PREFIX, publicKey]));
 };
 
 /**
@@ -152,7 +176,7 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     block.number       = parentBlock.number + 1;
     block.parentHash   = parentBlock.hash;
     block.hash         = '0x' + keccak256(parentBlock.hash).toString('hex');
-    block.producer     = this.getHexAddress();
+    block.producer     = this.hexAddress;
     block.state        = parentBlock.state    || [];
     block.transactions = transactions;
     block.receipts     = parentBlock.receipts || [];
@@ -161,17 +185,17 @@ Account.prototype.produceBlock = function produceBlock(parentBlock, transactions
     for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
         const serializedTx = block.transactions[txIndex];
         const tx           = helpers.toTxObject(serializedTx);
-        const sender       = block.state.find(account => account.address === tx.from);
+        const sender       = block.state.find(account => account.address === tx.from.slice(2));
 
-        if (!sender) { throw 'Sender account doesn\'t exist'; }
+        if (!sender) { console.log('Sender account doesn\'t exist'); continue; }
 
         block = blockchain.handleTransaction(tx, block);
 
         block.receipts.push(blockchain.generateReceipt(block, txIndex, serializedTx, tx));
     }
 
-    block.stateRoot    = helpers.merkleRoot(block.state.map(account => JSON.stringify(account)));
-    block.receiptsRoot = helpers.merkleRoot(block.receipts.map(receipt => JSON.stringify(receipt)));
+    block.stateRoot    = helpers.merkleRoot(block.state.map((account)    => JSON.stringify(account)));
+    block.receiptsRoot = helpers.merkleRoot(block.receipts.map((receipt) => JSON.stringify(receipt)));
 
     return block;
 };
